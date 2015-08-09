@@ -106,10 +106,14 @@ function load(){
 					if($(this).hasClass('ct-orange')){ netChecked = true;}
 					if($(this).hasClass('ct-red')){ negChecked = true;}
 				}
-				console.log(posChecked);
-				console.log(netChecked);
-				console.log(negChecked);
 			});
+			
+			// What to do when top part of the chart is clicked
+			/*$('#trSvg').click(function(e) {
+				//if((e.pageX>margin.left)&&(e.pageX<containerWidth))
+					console.log(e.pageX + ' , ' + e.pageY);
+			});*/
+			//d3.select(#trSvg).on("click", function(d){ console.log(d3.mouse(this);)});
 		}
 	})
 }
@@ -240,7 +244,7 @@ function drawAxis(){
 	
 	// draw top x axis
 	svg.append("g")
-	.attr("class", "x axis")
+	.attr("class", "x axis top")
 	.call(xAxis);
 	
 	// draw y axis
@@ -259,11 +263,114 @@ function appendCanvas(){
 	
 	// Append canvas
 	svg = d3.select("#chartContainer").append("svg")
+				//.attr("id","trSvg")
 				.attr("width", width + margin.left + margin.right)
 				.attr("height", height + margin.top + margin.bottom)
+				.on("click", mouseclick)
 				.append("g")
 					.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+				
 					
+}
+
+function mouseclick(d, i) {
+	mousex = d3.mouse(this)[0];
+	mousey = d3.mouse(this)[1];
+	if((mousex>margin.left)&&(mousex<(containerWidth-margin.right))&&(mousey<margin.top)&&(mousey>(margin.top-30)))
+		//console.log(d3.mouse(this));
+		splitSection(x2(mousex-90));
+}
+
+function splitSection(input){
+	console.log(input);
+	
+	borderLine = [];
+	// Get lowerbound and upperbound
+	for(var i=0; i<sections.length; i++){
+		if((input>sections[i].lowerBound) && (input<=sections[i].upperBound)){
+			borderLine.push(sections[i].lowerBound);
+			borderLine.push(input);
+			borderLine.push(sections[i].upperBound);
+			sectionName = sections[i].sectionName;
+			break;
+		}
+	}
+	
+	// Recalculate Data
+	newSections = [];
+	newSections = recalculateSections(borderLine, sectionName);
+	// console.log(newSections);
+	
+	// Update section class and chart class
+	// Check if the section and chart is the last one. If not, update the class
+	if(!(sectionName==sections[sections.length-1].sectionName)){
+		
+		for(var j=sections.length; j>=(sectionName+1); j--){
+			nextj=j+1;
+			console.log("change section "+j+" to section "+nextj);
+			d3.selectAll(".section"+j)
+						.attr("class", "section"+ nextj);
+
+			d3.selectAll(".chart"+j)
+				.attr("class", "chart"+nextj);
+				
+			sections[j-1].sectionName = nextj;
+			sections[j-1].sectionLine.linePos = nextj;
+		}
+	}
+	
+	d3.selectAll(".section"+sectionName)
+		.attr("class", "section"+ (sectionName+1));
+	
+	removed = sections.splice(sectionName-1,1,newSections[0],newSections[1]);
+	
+	// Split the chart
+	var j=sectionName;
+	for(var i=0; i<newSections.length; i++){		
+		
+		// if it's the first, update chart, else create new chart
+		if(i==0){
+			svg.selectAll('.chart'+j)
+				  .selectAll("path")
+				  .data(newSections[i].stackData)
+				  .attr("d", function(d) { return area(d.dataArr); })
+				  .style("fill", function(d) { return d.color; });
+		}else{
+			container = svg.append("g")
+					   .attr('class','chart'+j);
+					   
+			container.selectAll("path")
+				.data(newSections[i].stackData)
+				.enter().append("path")
+				.attr("d", function(d) { return area(d.dataArr); })
+				.style("fill", function(d) { return d.color; })
+				.append("title")
+				.text(function(d) { return d.type; });
+		}
+		
+		maxYAfterStacked = getMaxYOfSection(newSections[i].stackData);
+		sectionSize = x(newSections[i].upperBound) - x(newSections[i].lowerBound);
+		
+		svg.selectAll('.chart'+j)
+			.attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(newSections[i].lowerBound)) + "," + 0 + ")"; })
+			.transition()
+			.duration(2500);;
+		
+		j++;
+	
+	}	
+	console.log(sections);
+	// Draw line
+	sectionLineList.length = 0;
+	sectionLineList = sections.map(function (d) { return d.sectionLine; });
+	drawSectionLine(sectionLineList);
+	
+	// Redraw top x axis
+	d3.selectAll(".top").remove();
+	
+	svg.append("g")
+		.attr("class", "x axis top")
+		.call(xAxis);
 }
 
 function drawThemeRiverGraph(input){
@@ -271,7 +378,7 @@ function drawThemeRiverGraph(input){
 	for(var i = 0; i < input.length; i++){
 		container = svg.append("g")
 					   .attr('class','chart'+input[i].sectionName);
-		console.log(input[i].stackData);
+		//console.log(input[i].stackData);
 		container.selectAll("path")
 			.data(input[i].stackData)
 			.enter().append("path")
@@ -302,13 +409,18 @@ function getMaxYOfSection(inputArray){
 }
 
 function drawSectionLine(input){
+	// Remove existing line
+	for(var i=0; i<input.length;i++){
+		svg.selectAll(".section"+input[i].linePos).remove();
+	}
+	
 	// Add a group element for each section.
 	g = svg.selectAll(".section")
 		  .data(input.filter(function(d){ return !(d.x===(maxX+1))}))
 		.enter().append("svg:g")
 		  .attr("class", function(d) { return "section"+ d.linePos; })
-		  .attr("transform", function(d) { return "translate(" + x(d.x) + ")"; });
-		  .call(drag)
+		  .attr("transform", function(d) { return "translate(" + x(d.x) + ")"; })
+		  .call(drag);
 	
 	// Add section line and title.
 	g.append("svg:g")
@@ -352,6 +464,7 @@ function draw(){
 	// draw line
 	sectionLineList = sections.map(function (d) { return d.sectionLine; });
 	drawSectionLine(sectionLineList);
+	
 	
 }
 
@@ -435,7 +548,7 @@ function calculateDistance(input){
 		distances.push(d);
 	}
 	
-	console.log(distances);
+	//console.log(distances);
 }
 
 function processSectionData(inputLeft,inputRight){
@@ -680,20 +793,24 @@ function defineDragFunction(){
 				// Update sectionLineList
 				updatedSectionLine = [];
 				updatedSectionLine.length = 0;
+				updatedSections = [];
+				updatedSections.length =0;
 
 				if(crossedLeftLine.length > 0)
 					crossedLeft = crossedLeftLine[crossedLeftLine.length-1].linePos;
 				else
 					crossedLeft = d.linePos;
 				
-				for(var i=0; i<crossedLeft; i++){
+				for(var i=0; i<crossedLeft-1; i++){
 					updatedSectionLine.push(sectionLineList[i]);	
+					updatedSections.push(sections[i]);
 				}
 
-				newd = {x:d.x, text:d.text, linePos:crossedLeft};
+				newd = new Line({x:d.x, text:d.text, linePos:crossedLeft});
 				updatedSectionLine.push(newd);
-				
-				
+				updatedSections.push(changedSections[0]);
+				updatedSections.push(changedSections[1]);
+				//console.log(updatedSections);
 				// update section class
 				d3.selectAll(".section"+d.linePos)
 					.attr("class", "section"+crossedLeft);
@@ -702,26 +819,36 @@ function defineDragFunction(){
 					crossedRight = crossedRightLine[crossedRightLine.length-1].linePos;
 				else
 					crossedRight = d.linePos;
-				
-				console.log(x(sectionLineList[crossedRight+1].x)-x(newd.x));
-				console.log(sectionSize);
-				console.log(move);
-				console.log(window['newStackData'+2]);
-				j=1;
-				for(var i=crossedRight+1; i<sectionLineList.length; i++){
+				//console.log(crossedRight);
+				//console.log(x(sectionLineList[crossedRight+1].x)-x(newd.x));
+				//console.log(sectionSize);
+				//console.log(move);
+				//console.log(window['newStackData'+2]);
+				//var j=1;
+				for(var i=crossedRight; i<sectionLineList.length; i++){
 					// update section class
+					crossedLeft++;
 					d3.selectAll(".section"+sectionLineList[i].linePos)
-						.attr("class", "section"+ (crossedLeft + j));
-					sectionLineList[i].linePos = crossedLeft + j;
-					updatedSectionLine.push(sectionLineList[i]);
+						.attr("class", "section"+ crossedLeft);
+					sectionLineList[i].linePos = crossedLeft	;
+					line = new Line({x:sectionLineList[i].x, text:sectionLineList[i].text, linePos:crossedLeft});
+					updatedSectionLine.push(line);
 					
-					j++;
+					//j++;
 				}
+				//console.log(updatedSectionLine);
 				
+				
+				for(var i=crossedRight+1; i<sectionLineList.length; i++){
+					sections[i].sectionName = i;
+					sections[i].sectionLine.linePos = i;
+					updatedSections.push(sections[i]);
+				}
+
 				// Update chart
 				sectionNo = chartToUpdate[0];
-				for(var i=chartToUpdate[chartToUpdate.length-1]; i<sectionLineList.length; i++){
-
+				for(var i=chartToUpdate[chartToUpdate.length-1]; i<=sectionLineList.length; i++){
+					
 					d3.selectAll(".chart"+i)
 						.attr("class", "chart"+(sectionNo+1));
 						
@@ -730,7 +857,9 @@ function defineDragFunction(){
 				
 				sectionLineList.length=0;
 				sectionLineList = updatedSectionLine; 
-	
+				sections.length=0;
+				sections = updatedSections;
+				console.log(sections);
 				
 			});
 }
@@ -742,23 +871,26 @@ function recalculateSummary(line){
 	currentXPos = line.linePos;
 
 	if(lowerBound === undefined || lowerBound === null){
-		lowerBound = sectionLineList[line.linePos-1];
+		if(currentXPos==1)
+			lowerBound = new Line({x:minX-1, text:round(minX-1,2), linePos: 0});
+		else
+			lowerBound = sectionLineList[line.linePos-2];
 	}
 	
 	if(upperBound === undefined || upperBound === null){
-		upperBound = sectionLineList[line.linePos+1];
+		upperBound = sectionLineList[line.linePos];
 	}
-
+	
 	if(currentX >= upperBound.x){
 		// remove the line and add the removed line to the list
 		if(d3.selectAll(".section"+upperBound.linePos).remove())
-			crossedRightLine.push(sectionLineList[upperBound.linePos]);
+			crossedRightLine.push(sectionLineList[upperBound.linePos-1]);
 		
 		// remove chart 
 		d3.selectAll(".chart"+upperBound.linePos).remove();
 		
 		// update upperBound
-		upperBound = sectionLineList[upperBound.linePos+1];
+		upperBound = sectionLineList[upperBound.linePos];
 		
 		// get which chart to update
 		if(chartToUpdate[chartToUpdate.length-1]!=upperBound.linePos)
@@ -768,13 +900,16 @@ function recalculateSummary(line){
 	if(currentX <= lowerBound.x){
 		// remove the line and add the removed line to the list
 		if(d3.selectAll(".section"+lowerBound.linePos).remove())
-			crossedLeftLine.push(sectionLineList[lowerBound.linePos]);
+			crossedLeftLine.push(sectionLineList[lowerBound.linePos-1]);
 		
 		// remove chart 
 		d3.selectAll(".chart"+(lowerBound.linePos+1)).remove();
-
-		// update upperBound
-		lowerBound = sectionLineList[lowerBound.linePos-1];
+		
+		// update lowerBound
+		if(lowerBound.linePos==1)
+			lowerBound = new Line({x:minX-1, text:round(minX-1,2), linePos: 0});
+		else
+			lowerBound = sectionLineList[lowerBound.linePos-2];
 		
 		// get which chart to update
 		if(chartToUpdate[0]!=(lowerBound.linePos+1))
@@ -786,28 +921,14 @@ function recalculateSummary(line){
 	changedLine.push(lowerBound.x);
 	changedLine.push(currentX);
 	changedLine.push(upperBound.x);
-	
+
 	changedSections.length = 0;
-	sectionName = line.linePos;
-	for(var i=0; i<changedLine.length; i++){
-			nexti = i+1;
-			
-			processSectionData(changedLine[i],changedLine[nexti]);
-		
-			newLine = new Line({x:changedLine[nexti], text:round(changedLine[nexti],2), linePos: sectionName});
-			changedSections.push(new Section(
-			{	sectionName: sectionName,
-				lowerBound: changedLine[i],
-				upperBound: changedLine[nexti],
-				sectionLine: newLine,
-				slices: slices,
-				normalizedSlices: normalizedSlices,
-				stackData: stackData,
-				max: max
-			}));
-			
-			sectionName++;
-	}
+	if(crossedLeftLine.length>0)
+		sectionName = line.linePos-1;
+	else
+		sectionName = line.linePos;
+	
+	changedSections = recalculateSections(changedLine,sectionName);
 	
 	// Redraw Affected chart
 	var j=0;
@@ -820,11 +941,11 @@ function recalculateSummary(line){
 				  .attr("d", function(d) { return area(d.dataArr); })
 				  .style("fill", function(d) { return d.color; });
 						
-			maxYAfterStacked = getMaxYOfSection(changedSections[i].stackData);
-			sectionSize = x(changedSections[i].upperBound) - x(changedSections[i].lowerBound);
-
-			svg.selectAll('.chart'+changedSections[i].sectionName)
-				.attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(changedSections[i].lowerBound)) + "," + 0 + ")"; })
+			maxYAfterStacked = getMaxYOfSection(changedSections[j].stackData);
+			sectionSize = x(changedSections[j].upperBound) - x(changedSections[j].lowerBound);
+			
+			svg.selectAll('.chart'+i)
+				.attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(changedSections[j].lowerBound)) + "," + 0 + ")"; })
 				.transition()
 				.duration(2500);;
 
@@ -832,4 +953,29 @@ function recalculateSummary(line){
 		}
 		
 	}	
+}
+
+function recalculateSections(inputList, inputSectionName){
+	outputList = [];
+	for(var i=0; i<inputList.length-1; i++){
+			nexti = i+1;
+			
+			processSectionData(inputList[i],inputList[nexti]);
+
+			newLine = new Line({x:inputList[nexti], text:round(inputList[nexti],2), linePos: inputSectionName});
+			outputList.push(new Section(
+			{	sectionName: inputSectionName,
+				lowerBound: inputList[i],
+				upperBound: inputList[nexti],
+				sectionLine: newLine,
+				slices: slices,
+				normalizedSlices: normalizedSlices,
+				stackData: stackData,
+				max: max
+			}));
+			
+			inputSectionName++;
+	}
+	
+	return outputList;
 }
