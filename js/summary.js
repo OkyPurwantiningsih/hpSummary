@@ -107,12 +107,59 @@ function load(){
 					if($(this).hasClass('ct-red')){ negChecked = true;}
 				}
 				
-				console.log("clickedddd");
+				// update chart
+				if(!(d3.select("#chartContainer").select("svg")[0][0] === null)){
+					redrawChart();
+				}
 			});
 			
 
 		}
 	})
+}
+
+function redrawChart(){
+	if(sliderVal>0){
+		console.log(sectionLineList);
+		// recalculate the data
+		sections.length = 0;
+		//sectionSizePx = width/sliderVal;
+		//xRange = n/sliderVal;
+
+		// ====== 2. Define the profile of each section
+		var neg, net, pos;
+		sectionName = 1;
+		var i=(minX-1), nexti;
+
+		for(var j=0; j<sectionLineList.length; j++){
+			
+			nexti = sectionLineList[j].x;
+
+			processSectionData(i,nexti);
+		
+			line = new Line({x:nexti, text:round(nexti,2), linePos: sectionName});
+			sections.push(new Section(
+			{	sectionName: sectionName,
+				lowerBound: i,
+				upperBound: nexti,
+				sectionLine: line,
+				slices: slices,
+				normalizedSlices: normalizedSlices,
+				stackData: stackData,
+				max: max
+			}));
+			
+			sectionName++;
+			i = nexti;
+		}
+		
+		//calculateDistance(sections);
+		//cluster();
+		
+		// Visualize
+		redrawThemeRiverGraph(sections);
+	}
+	
 }
 
 function drawChart(){
@@ -339,6 +386,8 @@ function splitSection(input){
 				  .style("fill", function(d) { return d.color; });
 			
 			svg.selectAll('.chart'+j)
+			//.transition()
+		    //.duration(2500)
 			.attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(newSections[i].lowerBound)) + "," + 0 + ")"; });
 			
 		}else{
@@ -402,29 +451,34 @@ function drawThemeRiverGraph(input){
 	}
 }
 
-/*function redrawThemeRiverGraph(input){
+function redrawThemeRiverGraph(input){
 
 	for(var i = 0; i < input.length; i++){
-		container = svg.append("g")
-					   .attr('class','chart'+input[i].sectionName);
-		//console.log(input[i].stackData);
-		container.selectAll("path")
-			.data(input[i].stackData)
-			.enter().append("path")
-			.attr("d", function(d) { return area(d.dataArr); })
-			.style("fill", function(d) { return d.color; })
-			.append("title")
-			.text(function(d) { return d.type; });
 		
 		maxYAfterStacked = getMaxYOfSection(input[i].stackData);
 		sectionSize = x(input[i].upperBound) - x(input[i].lowerBound);
+			  
+		tr = svg.selectAll('.chart'+input[i].sectionName);
+		
+	    tr.selectAll("path")
+		  .data(input[i].stackData)
+		  .transition()
+		  .duration(2500)
+		  .attr("d", function(d) { return area(d.dataArr); })
+		  .style("fill", function(d) { return d.color; });
+		  //.append("title")
+		  //.text(function(d) { return d.type; });
+
 		
 		// Only need to transform if there are more than one graph
-		if(!(input.length===1)){
-			svg.selectAll('.chart'+input[i].sectionName).attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(input[i].lowerBound)) + "," + 0 + ")"; });
-		}	
+
+		svg.selectAll('.chart'+input[i].sectionName)
+		   .transition()
+		   .duration(2500)
+		   .attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(input[i].lowerBound)) + "," + 0 + ")"; });
+	
 	}
-}*/
+}
 
 // return the maximum x for a certain section
 function getMaxYOfSection(inputArray){
