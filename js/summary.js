@@ -328,33 +328,42 @@ function splitSection(input){
 	var j=sectionName;
 	for(var i=0; i<newSections.length; i++){		
 		
+		maxYAfterStacked = getMaxYOfSection(newSections[i].stackData);
+		sectionSize = x(newSections[i].upperBound) - x(newSections[i].lowerBound);
+		
 		// if it's the first, update chart, else create new chart
 		if(i==0){
 			svg.selectAll('.chart'+j)
 				  .selectAll("path")
 				  .data(newSections[i].stackData)
+				  //.transition()
+				  //.duration(2500)
 				  .attr("d", function(d) { return area(d.dataArr); })
 				  .style("fill", function(d) { return d.color; });
+			
+			svg.selectAll('.chart'+j)
+			.attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(newSections[i].lowerBound)) + "," + 0 + ")"; });
+			
 		}else{
+
 			container = svg.append("g")
-					   .attr('class','chart'+j);
-					   
+					   .attr('class','chart'+j)
+					   .attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(newSections[i].lowerBound)) + "," + 0 + ")"; });
+						
 			container.selectAll("path")
 				.data(newSections[i].stackData)
 				.enter().append("path")
 				.attr("d", function(d) { return area(d.dataArr); })
 				.style("fill", function(d) { return d.color; })
 				.append("title")
-				.text(function(d) { return d.type; });
+				.text(function(d) { return d.type; })
+								;
 		}
 		
-		maxYAfterStacked = getMaxYOfSection(newSections[i].stackData);
-		sectionSize = x(newSections[i].upperBound) - x(newSections[i].lowerBound);
 		
-		svg.selectAll('.chart'+j)
-			.attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(newSections[i].lowerBound)) + "," + 0 + ")"; })
-			.transition()
-			.duration(2500);;
+		
+		/*svg.selectAll('.chart'+j)
+			.attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(newSections[i].lowerBound)) + "," + 0 + ")"; });*/
 		
 		j++;
 	
@@ -805,7 +814,7 @@ function defineDragFunction(){
 					updatedSectionLine.push(sectionLineList[i]);	
 					updatedSections.push(sections[i]);
 				}
-
+				//console.log(changedSections);
 				newd = new Line({x:d.x, text:d.text, linePos:crossedLeft});
 				updatedSectionLine.push(newd);
 				updatedSections.push(changedSections[0]);
@@ -859,7 +868,8 @@ function defineDragFunction(){
 				sectionLineList = updatedSectionLine; 
 				sections.length=0;
 				sections = updatedSections;
-				console.log(sections);
+				//console.log(sections);
+				//console.log(sectionLineList);
 				
 			});
 }
@@ -923,11 +933,11 @@ function recalculateSummary(line){
 	changedLine.push(upperBound.x);
 
 	changedSections.length = 0;
-	if(crossedLeftLine.length>0)
+	/*if(crossedLeftLine.length>0)
 		sectionName = line.linePos-1;
 	else
-		sectionName = line.linePos;
-	
+		sectionName = line.linePos;*/
+	sectionName = chartToUpdate[0];
 	changedSections = recalculateSections(changedLine,sectionName);
 	
 	// Redraw Affected chart
@@ -953,6 +963,9 @@ function recalculateSummary(line){
 		}
 		
 	}	
+	
+	console.log(changedSections);
+	console.log(chartToUpdate);
 }
 
 function recalculateSections(inputList, inputSectionName){
