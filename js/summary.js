@@ -106,14 +106,11 @@ function load(){
 					if($(this).hasClass('ct-orange')){ netChecked = true;}
 					if($(this).hasClass('ct-red')){ negChecked = true;}
 				}
+				
+				console.log("clickedddd");
 			});
 			
-			// What to do when top part of the chart is clicked
-			/*$('#trSvg').click(function(e) {
-				//if((e.pageX>margin.left)&&(e.pageX<containerWidth))
-					console.log(e.pageX + ' , ' + e.pageY);
-			});*/
-			//d3.select(#trSvg).on("click", function(d){ console.log(d3.mouse(this);)});
+
 		}
 	})
 }
@@ -356,8 +353,7 @@ function splitSection(input){
 				.attr("d", function(d) { return area(d.dataArr); })
 				.style("fill", function(d) { return d.color; })
 				.append("title")
-				.text(function(d) { return d.type; })
-								;
+				.text(function(d) { return d.type; });
 		}
 		
 		
@@ -398,11 +394,37 @@ function drawThemeRiverGraph(input){
 		
 		maxYAfterStacked = getMaxYOfSection(input[i].stackData);
 		sectionSize = x(input[i].upperBound) - x(input[i].lowerBound);
+		
+		// Only need to transform if there are more than one graph
 		if(!(input.length===1)){
 			svg.selectAll('.chart'+input[i].sectionName).attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(input[i].lowerBound)) + "," + 0 + ")"; });
 		}	
 	}
 }
+
+/*function redrawThemeRiverGraph(input){
+
+	for(var i = 0; i < input.length; i++){
+		container = svg.append("g")
+					   .attr('class','chart'+input[i].sectionName);
+		//console.log(input[i].stackData);
+		container.selectAll("path")
+			.data(input[i].stackData)
+			.enter().append("path")
+			.attr("d", function(d) { return area(d.dataArr); })
+			.style("fill", function(d) { return d.color; })
+			.append("title")
+			.text(function(d) { return d.type; });
+		
+		maxYAfterStacked = getMaxYOfSection(input[i].stackData);
+		sectionSize = x(input[i].upperBound) - x(input[i].lowerBound);
+		
+		// Only need to transform if there are more than one graph
+		if(!(input.length===1)){
+			svg.selectAll('.chart'+input[i].sectionName).attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(input[i].lowerBound)) + "," + 0 + ")"; });
+		}	
+	}
+}*/
 
 // return the maximum x for a certain section
 function getMaxYOfSection(inputArray){
@@ -557,7 +579,7 @@ function calculateDistance(input){
 		distances.push(d);
 	}
 	
-	//console.log(distances);
+	console.log(distances);
 }
 
 function processSectionData(inputLeft,inputRight){
@@ -565,18 +587,36 @@ function processSectionData(inputLeft,inputRight){
 		
 	slices = [];
 	listPos = [], listNet = [], listNeg = [], dataCombined = [], stackData = [];
+	listPosEmpty = [], listNetEmpty = [], listNegEmpty = []
 	slices.length = 0;
 	max = 0;
 	for(var j=0; j<listOfSession.length; j++){
 		dataPerSession = dataPerSection.filter(function(d) { return d.sessionName == listOfSession[j];});
 		//console.log(dataPerSession.filter(isNeutral));
 		
-		neg = dataPerSession.filter(isNegative).length;
-		net = dataPerSession.filter(isNeutral).length;
-		pos = dataPerSession.filter(isPositive).length;
+		if(negChecked)
+			neg = dataPerSession.filter(isNegative).length;
+		else
+			neg = 0;
+		
+		if(netChecked)
+			net = dataPerSession.filter(isNeutral).length;
+		else
+			net = 0;
+		
+		if(posChecked)
+			pos = dataPerSession.filter(isPositive).length;
+		else
+			pos = 0;
+		
 		listPos.push(new Dt({sessionName:listOfSession[j],noOfEvent:pos,eventCat:"Positive"}));
 		listNet.push(new Dt({sessionName:listOfSession[j],noOfEvent:net,eventCat:"Neutral"}));
 		listNeg.push(new Dt({sessionName:listOfSession[j],noOfEvent:neg,eventCat:"Negative"}));
+		
+		// array for empty eventCat which will be used when user unchecked the check box for related eventCat
+		/*listPosEmpty.push(new Dt({sessionName:listOfSession[j],noOfEvent:0,eventCat:"Positive"}));
+		listNetEmpty.push(new Dt({sessionName:listOfSession[j],noOfEvent:0,eventCat:"Neutral"}));
+		listNegEmpty.push(new Dt({sessionName:listOfSession[j],noOfEvent:0,eventCat:"Negative"}));*/
 		
 		// calculate max value for all session in the same section
 		max = d3.max([max,d3.max([pos, d3.max([neg, net])])]);
@@ -588,6 +628,8 @@ function processSectionData(inputLeft,inputRight){
 		
 	}
 	
+	// put all event category together
+	//dataCombined = setDataCombined(listNeg, listNet, listPos, listNegEmpty, listNetEmpty, listPosEmpty);
 	dataCombined = [{type:eventType[0], dataArr: listNeg, color:trColor[0]},
 					{type:eventType[1], dataArr: listNet, color:trColor[1]},
 					{type:eventType[2], dataArr: listPos, color:trColor[2]}];
@@ -603,6 +645,60 @@ function processSectionData(inputLeft,inputRight){
 			pos:(slices[j].pos/max)
 		}));
 	}
+}
+
+function setDataCombined(listNeg, listNet, listPos, listNegEmpty, listNetEmpty, listPosEmpty){
+	combined = [];
+	if(posChecked && netChecked && negChecked){
+		combined = [{type:eventType[0], dataArr: listNeg, color:trColor[0]},
+					{type:eventType[1], dataArr: listNet, color:trColor[1]},
+					{type:eventType[2], dataArr: listPos, color:trColor[2]}];
+	}
+	
+	if(!posChecked && netChecked && negChecked){
+		combined = [{type:eventType[0], dataArr: listNeg, color:trColor[0]},
+					{type:eventType[1], dataArr: listNet, color:trColor[1]},
+					{type:eventType[2], dataArr: listPosEmpty, color:trColor[2]}];
+	}
+	
+	if(posChecked && !netChecked && negChecked){
+		combined = [{type:eventType[0], dataArr: listNeg, color:trColor[0]},
+					{type:eventType[1], dataArr: listNetEmpty, color:trColor[1]},
+					{type:eventType[2], dataArr: listPos, color:trColor[2]}];
+	}
+	
+	if(posChecked && netChecked && !negChecked){
+		combined = [{type:eventType[0], dataArr: listNegEmpty, color:trColor[0]},
+					{type:eventType[1], dataArr: listNet, color:trColor[1]},
+					{type:eventType[2], dataArr: listPos, color:trColor[2]}];
+	}
+	
+	if(!posChecked && !netChecked && negChecked){
+		combined = [{type:eventType[0], dataArr: listNeg, color:trColor[0]},
+					{type:eventType[1], dataArr: listNetEmpty, color:trColor[1]},
+					{type:eventType[2], dataArr: listPosEmpty, color:trColor[2]}];
+	}
+	
+	if(posChecked && !netChecked && !negChecked){
+		combined = [{type:eventType[0], dataArr: listNegEmpty, color:trColor[0]},
+					{type:eventType[1], dataArr: listNetEmpty, color:trColor[1]},
+					{type:eventType[2], dataArr: listPos, color:trColor[2]}];
+	}
+	
+	if(!posChecked && netChecked && !negChecked){
+		combined = [{type:eventType[0], dataArr: listNegEmpty, color:trColor[0]},
+					{type:eventType[1], dataArr: listNet, color:trColor[1]},
+					{type:eventType[2], dataArr: listPosEmpty, color:trColor[2]}];
+	}
+	
+	if(!posChecked && !netChecked && !negChecked){
+		combined = [{type:eventType[0], dataArr: listNegEmpty, color:trColor[0]},
+					{type:eventType[1], dataArr: listNetEmpty, color:trColor[1]},
+					{type:eventType[2], dataArr: listPosEmpty, color:trColor[2]}];
+	}
+	
+	
+	return combined;
 }
 
 function drawSlider(){
