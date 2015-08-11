@@ -7,7 +7,7 @@ var sliderMargin = {top: 200, right: 20, bottom: 200, left: 10},
 var xS, brush, svgS, slider, handle, sliderVal;
 
 // Define y axis variable
-var listOfSession, tr_y, y, yAxis, sectionLine, axis; 
+var listOfSession, tr_y, y, yAxis, sectionLine, axis, gridyAxis; 
 
 // Define x axis variable
 var x,x2, trmaxX, tr_x, xAxis;
@@ -44,6 +44,7 @@ $(document).ready(function (){
 
 function load(){
 	
+	//d3.json("data/summaryAllSessionCedric.json", function(error, dataAll) {
 	d3.json("data/test2.json", function(error, dataAll) {
 		if(error){
 			console.log(error);
@@ -134,8 +135,10 @@ function redrawChart(){
 		for(var j=0; j<sectionLineList.length; j++){
 			
 			nexti = sectionLineList[j].x;
-
-			processSectionData(i,nexti);
+			
+			dataPerSection = data.filter(function(d){ return ((d.x > i) && (d.x <= nexti))});
+			processSectionData(dataPerSection);
+			//processSectionData(i,nexti);
 		
 			line = new Line({x:nexti, text:round(nexti,2), linePos: sectionName});
 			sections.push(new Section(
@@ -189,7 +192,9 @@ function drawChart(){
 				nexti = i + xRange;
 				if(j==sliderVal-1){nexti=maxX+1;} // For the right most section, set upperbound to maxX+1
 				
-				processSectionData(i,nexti);
+				dataPerSection = data.filter(function(d){ return ((d.x > i) && (d.x <= nexti))});
+				processSectionData(dataPerSection);
+				//processSectionData(i,nexti);
 			
 				line = new Line({x:nexti, text:round(nexti,2), linePos: sectionName});
 				sections.push(new Section(
@@ -253,6 +258,13 @@ function initYAxis(){
 				.scale(y)
 				.tickFormat(function(d) { return "Session " + d;})
 				.orient("left");
+				
+	gridyAxis = d3.svg.axis()
+					.scale(y)
+					.ticks(5)
+					.tickSize(width, 0)
+					.tickFormat("")
+					.orient("right");
 	
 	sectionLine = d3.scale.linear()
 					.range([height,0])
@@ -305,21 +317,11 @@ function getMaxYAllSection(){
 }
 
 function drawAxis(){
-		// draw x axis
-	svg.append("g")
-	.attr("class", "x axis")
-	.attr("transform", "translate(0," + height + ")")
-	.call(xAxis);
-	
+
 	// draw line for slider
 	svg.append("g")
 	.attr("class", "x axis")
 	.attr("transform", "translate(0," + (height+30) + ")")
-	.call(xAxis);
-	
-	// draw top x axis
-	svg.append("g")
-	.attr("class", "x axis top")
 	.call(xAxis);
 	
 	// draw y axis
@@ -330,6 +332,23 @@ function drawAxis(){
 		  .attr("text-anchor", "middle")
 		  .attr("y", -9)
 		  .text(minX-1);
+		  
+	// draw y axis grid
+	svg.append("g")
+		.classed('y', true)
+		.classed('grid', true)
+		.call(gridyAxis);
+	
+	// draw x axis
+	svg.append("g")
+	.attr("class", "x axis")
+	.attr("transform", "translate(0," + height + ")")
+	.call(xAxis);
+	
+	// draw top x axis
+	svg.append("g")
+	.attr("class", "x axis top")
+	.call(xAxis);
 }
 
 function appendCanvas(){
@@ -597,7 +616,9 @@ function cluster(){
 			if(distances[i]<threshold){
 				console.log("merge section "+ (i+1) +" and "+ (i+2));
 				
-				processSectionData(sections[i].lowerBound,sections[i+1].upperBound);
+				dataPerSection = data.filter(function(d){ return ((d.x > sections[i].lowerBound) && (d.x <= sections[i+1].upperBound))});
+				processSectionData(dataPerSection);
+				//processSectionData(sections[i].lowerBound,sections[i+1].upperBound);
 				line = new Line({x:sections[i+1].upperBound, text:round(sections[i+1].upperBound,2), linePos: i+1});
 				sectionName = i+1;
 				
@@ -691,62 +712,8 @@ function processSectionDataByNumber(inputNo){
 		if(endSlice == data.length)
 			lastSection = true;
 		
-		// ========================
-		slices = [];
-		listPos = [], listNet = [], listNeg = [], dataCombined = [], stackData = [];
-		slices.length = 0;
-		max = 0;
-		for(var j=0; j<listOfSession.length; j++){
-			dataPerSession = dataPerSection.filter(function(d) { return d.sessionName == listOfSession[j];});
-			//console.log(dataPerSession.filter(isNeutral));
-			
-			if(negChecked)
-				neg = dataPerSession.filter(isNegative).length;
-			else
-				neg = 0;
-			
-			if(netChecked)
-				net = dataPerSession.filter(isNeutral).length;
-			else
-				net = 0;
-			
-			if(posChecked)
-				pos = dataPerSession.filter(isPositive).length;
-			else
-				pos = 0;
-			
-			listPos.push(new Dt({sessionName:listOfSession[j],noOfEvent:pos,eventCat:"Positive"}));
-			listNet.push(new Dt({sessionName:listOfSession[j],noOfEvent:net,eventCat:"Neutral"}));
-			listNeg.push(new Dt({sessionName:listOfSession[j],noOfEvent:neg,eventCat:"Negative"}));
-			
-			// calculate max value for all session in the same section
-			max = d3.max([max,d3.max([pos, d3.max([neg, net])])]);
-			slices.push(new Slice({	
-						neg: neg,
-						net: net,
-						pos: pos				
-					}));
-			
-		}
-		
-		// put all event category together
-		//dataCombined = setDataCombined(listNeg, listNet, listPos, listNegEmpty, listNetEmpty, listPosEmpty);
-		dataCombined = [{type:eventType[0], dataArr: listNeg, color:trColor[0]},
-						{type:eventType[1], dataArr: listNet, color:trColor[1]},
-						{type:eventType[2], dataArr: listPos, color:trColor[2]}];
-		
-		stackData = stack(dataCombined);
-		
-		// ====== 3. calculate normalized value for each slice by dividing it with max value	
-		normalizedSlices = [];
-		for(var j=0; j<slices.length; j++){
-			normalizedSlices.push(new Slice({
-				neg:(slices[j].neg/max),
-				net:(slices[j].net/max),
-				pos:(slices[j].pos/max)
-			}));
-		}
-		// ========================
+		processSectionData(dataPerSection);
+
 		// For the first section, set lowerBound as minX-1
 		if(sectionName==1)
 			lowerBound = minX-1;
@@ -780,17 +747,17 @@ function processSectionDataByNumber(inputNo){
 	
 }
 
-function processSectionData(inputLeft,inputRight){
-	dataPerSection = data.filter(function(d){ return ((d.x > inputLeft) && (d.x <= inputRight))});
+//function processSectionData(inputLeft,inputRight){
+function processSectionData(input){
+	//dataPerSection = data.filter(function(d){ return ((d.x > inputLeft) && (d.x <= inputRight))});
 		
 	slices = [];
 	listPos = [], listNet = [], listNeg = [], dataCombined = [], stackData = [];
 	slices.length = 0;
 	max = 0;
 	for(var j=0; j<listOfSession.length; j++){
-		dataPerSession = dataPerSection.filter(function(d) { return d.sessionName == listOfSession[j];});
-		//console.log(dataPerSession.filter(isNeutral));
-		
+		//dataPerSession = dataPerSection.filter(function(d) { return d.sessionName == listOfSession[j];});
+		dataPerSession = input.filter(function(d) { return d.sessionName == listOfSession[j];});
 		if(negChecked)
 			neg = dataPerSession.filter(isNegative).length;
 		else
@@ -1074,17 +1041,19 @@ function defineDragFunction(){
 			})
 			.on("drag", function(d) {
 				
+
 				d.x = x2(d3.event.x);
 				d.text = round(d.x,2);
-				d3.select(this)
-					.attr("transform", function(d) { return "translate(" + d3.event.x + ")"; })
-					.selectAll("text").text(function(d){ return d.text;});
+								
+				if((d.x<(maxX+1)) && (d.x>(minX-1))){ // the line can only be dragged within the left and right most line
+					d3.select(this)
+						.attr("transform", function(d) { return "translate(" + d3.event.x + ")"; })
+						.selectAll("text").text(function(d){ return d.text;});
+
+					recalculateSummary(d);
+					//redrawAffectedArea();
 				
-				
-				recalculateSummary(d);
-				//redrawAffectedArea();
-				
-				
+				}
 			})
 			.on("dragend", function(d){
 				// Update sectionLineList
@@ -1261,7 +1230,9 @@ function recalculateSections(inputList, inputSectionName){
 	for(var i=0; i<inputList.length-1; i++){
 			nexti = i+1;
 			
-			processSectionData(inputList[i],inputList[nexti]);
+			dataPerSection = data.filter(function(d){ return ((d.x > inputList[i]) && (d.x <= inputList[nexti]))});
+			processSectionData(dataPerSection);
+			//processSectionData(inputList[i],inputList[nexti]);
 
 			newLine = new Line({x:inputList[nexti], text:round(inputList[nexti],2), linePos: inputSectionName});
 			outputList.push(new Section(
