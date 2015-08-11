@@ -26,8 +26,8 @@ var containerWidth=1200,
 	width = containerWidth - margin.left - margin.right,
 	height = containerHeight - margin.top - margin.bottom;
 var stack, area;
-var sessions = "1,2,3,4,5,6,7,8,9,10,11,12,13,14";
-//var sessions = "1,2,3,4,5,6,7";
+//var sessions = "1,2,3,4,5,6,7,8,9,10,11,12,13,14";
+var sessions = "1,2,3,4,5,6,7";
 var sessionArr = sessions.split(",");
 var svg;
 
@@ -44,8 +44,8 @@ $(document).ready(function (){
 
 function load(){
 	
-	//d3.json("data/summaryAllSessionCedric.json", function(error, dataAll) {
-	d3.json("data/test2.json", function(error, dataAll) {
+	d3.json("data/summaryAllSessionCedric.json", function(error, dataAll) {
+	//d3.json("data/test2.json", function(error, dataAll) {
 		if(error){
 			console.log(error);
 			alert("Data can't be loaded");
@@ -197,7 +197,8 @@ function drawChart(){
 		// ====== 2. Define the profile of each section
 		if(toggleOff){
 
-			sections = processSectionDataByNumber(eventNo);
+			//sections = processSectionDataByNumber(eventNo);
+			sections = processSectionDataByNumber2(eventNo);
 
 			// Visualize
 			draw();
@@ -263,6 +264,15 @@ function sortIntegerAsc(a,b){
 	if (parseInt(a.x)<parseInt(b.x))
 		return -1;
 	if (parseInt(a.x)>parseInt(b.x))
+		return 1;
+		
+	return 0;
+}
+
+function sortFloatAsc(a,b){
+	if (parseFloat(a.x)<parseFloat(b.x))
+		return -1;
+	if (parseFloat(a.x)>parseFloat(b.x))
 		return 1;
 		
 	return 0;
@@ -708,10 +718,11 @@ function calculateDistance(input){
 	console.log(distances);
 }
 
+// this function considers all event type
 function processSectionDataByNumber(inputNo){
 	
 	// Order the data by the value of x, ascending
-	data.sort(sortIntegerAsc);
+	data.sort(sortFloatAsc);
 	
 	var i = 0, output = [];
 	sectionName = 1;
@@ -764,6 +775,76 @@ function processSectionDataByNumber(inputNo){
 	
 	return output;
 	//console.log(sections);
+	
+}
+
+// this function only considers positive and negative events
+function processSectionDataByNumber2(inputNo){
+	
+	dataPosNeg = []; 
+	// Order the data by the value of x, ascending
+	data.sort(sortFloatAsc);
+	dataPosNeg = data.filter(isPositiveOrNegative).sort(sortFloatAsc);
+
+	var i = 0, output = [];
+	sectionName = 1;
+	lowerBound = minX-1;
+	lastSection = false;
+	console.log("===============");
+	while(i<dataPosNeg.length){
+		
+		dataPersection = [];
+		dataPosNegPerSection = [];
+		// For every eventSliderVal value, group the data by event type
+		endSlice = i + inputNo;
+		eventLeft = dataPosNeg.length - endSlice;
+
+		if(eventLeft < 10){
+			upperBound = maxX+1;
+			endSlice = data.length;
+		}else{
+			dataPosNegPerSection = dataPosNeg.slice(i, endSlice);
+			upperBound = dataPosNegPerSection[dataPosNegPerSection.length-1].x;
+		}
+
+		dataPerSection = data.filter(function(d){ return ((d.x > lowerBound) && (d.x <= upperBound))});
+
+		if(endSlice == data.length)
+			lastSection = true;
+		
+		processSectionData(dataPerSection);
+
+		// For the first section, set lowerBound as minX-1
+		/*if(sectionName==1)
+			lowerBound = minX-1;
+		else
+			lowerBound = upperBound; // set the lowerBound equals to the previous section upperBound
+
+		// For the last section, set upperBound as maxX+1
+		if(lastSection)
+			upperBound = maxX+1;
+		else
+			upperBound = d3.max(dataPerSection, function(d) {return parseFloat(d.x);});*/
+		
+		line = new Line({x:upperBound, text:round(upperBound,2), linePos: sectionName});
+		output.push(new Section(
+		{	sectionName: sectionName,
+			lowerBound: lowerBound,
+			upperBound: upperBound,
+			sectionLine: line,
+			slices: slices,
+			normalizedSlices: normalizedSlices,
+			stackData: stackData,
+			max: max
+		}));
+		
+		lowerBound = upperBound;
+		sectionName++;
+		i=endSlice;
+	}
+	console.log(output);
+	return output;
+	
 	
 }
 
@@ -946,13 +1027,19 @@ function brushed() {
 	//d3.select("body").style("background-color", d3.hsl(value, .8, .8));
 	sliderVal = Math.round(value);
 	if(toggleOff){
-		eventNo = Math.round(data.length/sliderVal);
+		eventNo = Math.round(data.filter(isPositiveOrNegative).length/sliderVal);
+		//eventNo = Math.round(data.length/sliderVal);
 		if(sliderVal>0)
 			sliderText = eventNo+" events/section";
 		else
 			sliderText = "0 events/section";
-	}else
-		sliderText = "x-range: "+sliderVal;
+	}else{
+		if(sliderVal>0)
+			sliderText = "x-range: "+round((n/sliderVal),2);
+		else
+			sliderText = "x-range: "+n;
+	}
+		
 	
 	d3.selectAll("#sliderText").text(sliderText);
 	drawChart();
@@ -1292,3 +1379,9 @@ function getMinSectionSize(input){
 	
 	return minSize;
 }
+
+// Function to check if it's a Positive or negative event
+function isPositiveOrNegative(element) {
+	return ((element.eventCat == "Positive")||(element.eventCat == "Negative"));
+}
+
