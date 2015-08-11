@@ -164,45 +164,60 @@ function redrawChart(){
 
 function drawChart(){
 	if(sliderVal>0){
-		sections.length = 0;
-		sectionSizePx = width/sliderVal;
-		xRange = n/sliderVal;
-
-		// ====== 2. Define the profile of each section
-		var neg, net, pos;
-		sectionName = 1;
-		var i=(minX-1), nexti;
-		//while(i<(maxX+1)){
-		for(var j=0; j<sliderVal; j++){
-			nexti = i + xRange;
-			if(j==sliderVal-1){nexti=maxX+1;} // For the right most section, set upperbound to maxX+1
-			
-			processSectionData(i,nexti);
 		
-			line = new Line({x:nexti, text:round(nexti,2), linePos: sectionName});
-			sections.push(new Section(
-			{	sectionName: sectionName,
-				lowerBound: i,
-				upperBound: nexti,
-				sectionLine: line,
-				slices: slices,
-				normalizedSlices: normalizedSlices,
-				stackData: stackData,
-				max: max
-			}));
+		sections.length = 0;
+		// ====== 2. Define the profile of each section
+		if(toggleOff){
 			
-			sectionName++;
-			i = nexti;
+			var eventNo = Math.round(data.length/sliderVal);
+			console.log("eventNo: "+eventNo);
+			sections = processSectionDataByNumber(eventNo);
+			console.log(sections);
+			// Visualize
+			draw();
+		}else{
+			
+			
+			sectionSizePx = width/sliderVal;
+			xRange = n/sliderVal;
+			
+			var neg, net, pos;
+			sectionName = 1;
+			var i=(minX-1), nexti;
+			//while(i<(maxX+1)){
+			for(var j=0; j<sliderVal; j++){
+				nexti = i + xRange;
+				if(j==sliderVal-1){nexti=maxX+1;} // For the right most section, set upperbound to maxX+1
+				
+				processSectionData(i,nexti);
+			
+				line = new Line({x:nexti, text:round(nexti,2), linePos: sectionName});
+				sections.push(new Section(
+				{	sectionName: sectionName,
+					lowerBound: i,
+					upperBound: nexti,
+					sectionLine: line,
+					slices: slices,
+					normalizedSlices: normalizedSlices,
+					stackData: stackData,
+					max: max
+				}));
+				
+				sectionName++;
+				i = nexti;
+			}
+			
+			// ====== 4. calculate distance between consecutive slices
+			calculateDistance(sections);
+			
+			// ====== 5. Hierarchical Clustering
+			cluster();
+			
+			// Visualize
+			draw();
 		}
 		
-		// ====== 4. calculate distance between consecutive slices
-		calculateDistance(sections);
 		
-		// ====== 5. Hierarchical Clustering
-		cluster();
-		
-		// Visualize
-		draw();
 	}
 }
 
@@ -210,6 +225,15 @@ function sortStringAsc(a,b){
 	if (parseInt(a)<parseInt(b))
 		return -1;
 	if (parseInt(a)>parseInt(b))
+		return 1;
+		
+	return 0;
+}
+
+function sortIntegerAsc(a,b){
+	if (parseInt(a.x)<parseInt(b.x))
+		return -1;
+	if (parseInt(a.x)>parseInt(b.x))
 		return 1;
 		
 	return 0;
@@ -247,10 +271,17 @@ function initXAxis(){
 	x2 = d3.scale.linear().range([minX-1,maxX+1]).domain([0,width]);
 
 	trmaxX = getMaxYAllSection();
-
-	tr_x = d3.scale.linear()
+	
+	if(toggleOff){
+		tr_x = d3.scale.linear()
+				.range([0, getMinSectionSize(sections)])
+				.domain([0, trmaxX]);
+	}else{
+		tr_x = d3.scale.linear()
 				.range([0, sectionSizePx])
 				.domain([0, trmaxX]);
+	}
+	
 	
 	xAxis = d3.svg.axis()
 				.scale(x)
@@ -636,12 +667,124 @@ function calculateDistance(input){
 	console.log(distances);
 }
 
+function processSectionDataByNumber(inputNo){
+	
+	// Order the data by the value of x, ascending
+	data.sort(sortIntegerAsc);
+	
+	var i = 0, output = [];
+	sectionName = 1;
+	lastSection = false;
+	while(i<data.length){
+		
+		dataPersection = [];
+		// For every eventSliderVal value, group the data by event type
+		endSlice = i + inputNo;
+		eventLeft = data.length - endSlice;
+		if(eventLeft < 10){
+			dataPerSection = data.slice(i);
+			endSlice = data.length;
+		}else{
+			dataPerSection = data.slice(i, endSlice);
+		}
+		
+		if(endSlice == data.length)
+			lastSection = true;
+		
+		// ========================
+		slices = [];
+		listPos = [], listNet = [], listNeg = [], dataCombined = [], stackData = [];
+		slices.length = 0;
+		max = 0;
+		for(var j=0; j<listOfSession.length; j++){
+			dataPerSession = dataPerSection.filter(function(d) { return d.sessionName == listOfSession[j];});
+			//console.log(dataPerSession.filter(isNeutral));
+			
+			if(negChecked)
+				neg = dataPerSession.filter(isNegative).length;
+			else
+				neg = 0;
+			
+			if(netChecked)
+				net = dataPerSession.filter(isNeutral).length;
+			else
+				net = 0;
+			
+			if(posChecked)
+				pos = dataPerSession.filter(isPositive).length;
+			else
+				pos = 0;
+			
+			listPos.push(new Dt({sessionName:listOfSession[j],noOfEvent:pos,eventCat:"Positive"}));
+			listNet.push(new Dt({sessionName:listOfSession[j],noOfEvent:net,eventCat:"Neutral"}));
+			listNeg.push(new Dt({sessionName:listOfSession[j],noOfEvent:neg,eventCat:"Negative"}));
+			
+			// calculate max value for all session in the same section
+			max = d3.max([max,d3.max([pos, d3.max([neg, net])])]);
+			slices.push(new Slice({	
+						neg: neg,
+						net: net,
+						pos: pos				
+					}));
+			
+		}
+		
+		// put all event category together
+		//dataCombined = setDataCombined(listNeg, listNet, listPos, listNegEmpty, listNetEmpty, listPosEmpty);
+		dataCombined = [{type:eventType[0], dataArr: listNeg, color:trColor[0]},
+						{type:eventType[1], dataArr: listNet, color:trColor[1]},
+						{type:eventType[2], dataArr: listPos, color:trColor[2]}];
+		
+		stackData = stack(dataCombined);
+		
+		// ====== 3. calculate normalized value for each slice by dividing it with max value	
+		normalizedSlices = [];
+		for(var j=0; j<slices.length; j++){
+			normalizedSlices.push(new Slice({
+				neg:(slices[j].neg/max),
+				net:(slices[j].net/max),
+				pos:(slices[j].pos/max)
+			}));
+		}
+		// ========================
+		// For the first section, set lowerBound as minX-1
+		if(sectionName==1)
+			lowerBound = minX-1;
+		else
+			lowerBound = upperBound; // set the lowerBound equals to the previous section upperBound
+
+		// For the last section, set upperBound as maxX+1
+		if(lastSection)
+			upperBound = maxX+1;
+		else
+			upperBound = d3.max(dataPerSection, function(d) {return parseFloat(d.x);});
+		console.log(upperBound);
+		line = new Line({x:upperBound, text:round(upperBound,2), linePos: sectionName});
+		output.push(new Section(
+		{	sectionName: sectionName,
+			lowerBound: lowerBound,
+			upperBound: upperBound,
+			sectionLine: line,
+			slices: slices,
+			normalizedSlices: normalizedSlices,
+			stackData: stackData,
+			max: max
+		}));
+		
+		sectionName++;
+		i=endSlice;
+	}
+	
+	return output;
+	//console.log(sections);
+	
+}
+
 function processSectionData(inputLeft,inputRight){
 	dataPerSection = data.filter(function(d){ return ((d.x > inputLeft) && (d.x <= inputRight))});
 		
 	slices = [];
 	listPos = [], listNet = [], listNeg = [], dataCombined = [], stackData = [];
-	listPosEmpty = [], listNetEmpty = [], listNegEmpty = []
 	slices.length = 0;
 	max = 0;
 	for(var j=0; j<listOfSession.length; j++){
@@ -666,11 +809,6 @@ function processSectionData(inputLeft,inputRight){
 		listPos.push(new Dt({sessionName:listOfSession[j],noOfEvent:pos,eventCat:"Positive"}));
 		listNet.push(new Dt({sessionName:listOfSession[j],noOfEvent:net,eventCat:"Neutral"}));
 		listNeg.push(new Dt({sessionName:listOfSession[j],noOfEvent:neg,eventCat:"Negative"}));
-		
-		// array for empty eventCat which will be used when user unchecked the check box for related eventCat
-		/*listPosEmpty.push(new Dt({sessionName:listOfSession[j],noOfEvent:0,eventCat:"Positive"}));
-		listNetEmpty.push(new Dt({sessionName:listOfSession[j],noOfEvent:0,eventCat:"Neutral"}));
-		listNegEmpty.push(new Dt({sessionName:listOfSession[j],noOfEvent:0,eventCat:"Negative"}));*/
 		
 		// calculate max value for all session in the same section
 		max = d3.max([max,d3.max([pos, d3.max([neg, net])])]);
@@ -1141,4 +1279,15 @@ function recalculateSections(inputList, inputSectionName){
 	}
 	
 	return outputList;
+}
+
+function getMinSectionSize(input){
+	var minSize = x(input[0].upperBound) - x(input[0].lowerBound);
+	for(var i=1;i<input.length; i++){
+		size = x(input[i].upperBound) - x(input[i].lowerBound);
+		if( minSize >  size)
+			minSize = size;
+	}
+	
+	return minSize;
 }
