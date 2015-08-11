@@ -35,8 +35,18 @@
 			margin-left:90px;
 			margin-top:10px;
 			padding:10px;
-			width:500px;
+			width:600px;
 			height:63px;
+			float: left;
+			border-radius: 5px;
+		}
+		
+		.boxMiddle{
+			border:1px solid #999;
+			margin-left:10px;
+			margin-top:10px;
+			padding:10px;
+			width:300px;
 			float: left;
 			border-radius: 5px;
 		}
@@ -46,7 +56,8 @@
 			margin-left:10px;
 			margin-top:10px;
 			padding:10px;
-			width:300px;
+			width:150px;
+			height:63px;
 			float: left;
 			border-radius: 5px;
 		}
@@ -67,8 +78,14 @@
 		}
 		.cell {
 		  display: table-cell;
-		  text-align: center;
+		  text-align: left;
 		  vertical-align: middle;
+		}
+		.cell2 {
+		  display: table-cell;
+		  text-align: middle;
+		  vertical-align: middle;
+		  color: #05AE0E;
 		}
 	</style>
   </head>
@@ -76,13 +93,16 @@
 	<div class="boxLeft">
 		<div class="titlebox">Section Type</div>
 		<div class="row">
-			<div class="col-md-5">
+			<div class="col-md-6">
 				<div class="tableContainer">
-					<div class="cell">
+					<div class="cell" style="width:90px;">
 					By X Range
 					</div>
-					<div class="cell">
+					<div  id="sliderSwitch" class="cell" style="width:80px;">
 						<input type="checkbox" checked data-toggle="switch" class="ct-green"/>
+					</div>
+					<div class="cell2">
+					<b id="sliderText">38 events/section</b>
 					</div>
 					
 				</div>
@@ -90,12 +110,12 @@
 			<div class="cell">
 				<div id="brushSlider"></div>
 			</div>
-
-
-
+			<!--<div class="cell">
+				<span class="label label-success">Success</span>
+			</div>-->
 		</div>
 	</div>
-	<div class="boxRight">
+	<div class="boxMiddle">
 		<div class="titlebox">Events</div>
 		<div class="row">
 			<div class="col-md-4">
@@ -117,6 +137,25 @@
                     Negative
                 </label>
 			</div>
+		</div>
+	</div>
+	<div class="boxRight">
+		<div class="titlebox">Cluster</div>
+		<div class="row">
+			<div class="col-md-7">
+				<div class="tableContainer">
+					<div  id="clusterSwitch" class="cell" style="width:80px;">
+						<input type="checkbox" checked data-toggle="switch" class="ct-green"/>
+					</div>
+				</div>
+			</div>
+			<div class="cell" style="width:50px;">
+				<div class="form-group has-success">
+					<input id="threshold" type="text" value="4" class="form-control" />
+				</div>   
+			</div>
+
+			
 		</div>
 	</div>
 

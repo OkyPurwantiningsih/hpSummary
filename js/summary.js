@@ -4,7 +4,7 @@
 var sliderMargin = {top: 200, right: 20, bottom: 200, left: 10},
 	sliderWidth = 280 - sliderMargin.left - sliderMargin.right,
 	sliderHeight = 400 - sliderMargin.bottom - sliderMargin.top;
-var xS, brush, svgS, slider, handle, sliderVal;
+var xS, brush, svgS, slider, handle, sliderVal, eventNo;
 
 // Define y axis variable
 var listOfSession, tr_y, y, yAxis, sectionLine, axis, gridyAxis; 
@@ -12,7 +12,7 @@ var listOfSession, tr_y, y, yAxis, sectionLine, axis, gridyAxis;
 // Define x axis variable
 var x,x2, trmaxX, tr_x, xAxis;
 // Define variable for Switch
-var toggleOff;
+var toggleOff, clusterOff;
 var posChecked = true, netChecked = true, negChecked = true;
 
 // Define Canvas and Chart variables
@@ -75,18 +75,25 @@ function load(){
 			// Draw Slider. Set max slider value = number of sections (n)
 			drawSlider();
 			
-			// Get initial value of switch
-			if($('.switch').children().hasClass('switch-on')){
+			// Get initial value of slider switch
+			if($('#sliderSwitch').children().children().hasClass('switch-on')){
 				toggleOff=false;
 			}else{
 				toggleOff=true;
 			}
 			
+			// Get initial value of cluster switch
+			if($('#clusterSwitch').children().children().hasClass('switch-on')){
+				clusterOff=false;
+			}else{
+				clusterOff=true;
+			}
+			
 			// What to do when switch is clicked
-			$('.switch').click(function() {
+			$('#sliderSwitch').click(function() {
 				
 				// Check If Enabled (Has 'switch-on' Class)
-				if ($(this).children().hasClass('switch-on')){
+				if ($(this).children().children().hasClass('switch-on')){
 					toggleOff=false;
 					
 				} else { // If Button Is Disabled (Has 'switch-off' Class)
@@ -114,6 +121,24 @@ function load(){
 				}
 			});
 			
+			// What to do when cluster switch is clicked
+			$('#clusterSwitch').click(function() {
+				
+				// Check If Enabled (Has 'switch-on' Class)
+				if ($(this).children().children().hasClass('switch-on')){
+					clusterOff=false;
+					
+				} else { // If Button Is Disabled (Has 'switch-off' Class)
+					clusterOff=true;
+				}
+				console.log(clusterOff);
+			});
+			
+			// What to do when threshold text box is changed
+			$('#threshold').on('change', function(){
+				threshold = $(this).val();
+				//console.log('Content has been changed to '+content);
+			});
 
 		}
 	})
@@ -171,11 +196,9 @@ function drawChart(){
 		sections.length = 0;
 		// ====== 2. Define the profile of each section
 		if(toggleOff){
-			
-			var eventNo = Math.round(data.length/sliderVal);
-			console.log("eventNo: "+eventNo);
+
 			sections = processSectionDataByNumber(eventNo);
-			console.log(sections);
+
 			// Visualize
 			draw();
 		}else{
@@ -216,7 +239,8 @@ function drawChart(){
 			calculateDistance(sections);
 			
 			// ====== 5. Hierarchical Clustering
-			cluster();
+			if(!clusterOff)
+				cluster();
 			
 			// Visualize
 			draw();
@@ -494,10 +518,9 @@ function drawThemeRiverGraph(input){
 		maxYAfterStacked = getMaxYOfSection(input[i].stackData);
 		sectionSize = x(input[i].upperBound) - x(input[i].lowerBound);
 		
-		// Only need to transform if there are more than one graph
-		if(!(input.length===1)){
-			svg.selectAll('.chart'+input[i].sectionName).attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(input[i].lowerBound)) + "," + 0 + ")"; });
-		}	
+		svg.selectAll('.chart'+input[i].sectionName)
+			.attr("transform", function(d){ return "translate("+ (((sectionSize/2)-tr_x(maxYAfterStacked/2))+x(input[i].lowerBound)) + "," + 0 + ")"; });
+
 	}
 }
 
@@ -518,9 +541,6 @@ function redrawThemeRiverGraph(input){
 		  .style("fill", function(d) { return d.color; });
 		  //.append("title")
 		  //.text(function(d) { return d.type; });
-
-		
-		// Only need to transform if there are more than one graph
 
 		svg.selectAll('.chart'+input[i].sectionName)
 		   .transition()
@@ -614,7 +634,7 @@ function cluster(){
 		count = 0;
 		for(var i=0; i<distances.length; i++){
 			if(distances[i]<threshold){
-				console.log("merge section "+ (i+1) +" and "+ (i+2));
+				//console.log("merge section "+ (i+1) +" and "+ (i+2));
 				
 				dataPerSection = data.filter(function(d){ return ((d.x > sections[i].lowerBound) && (d.x <= sections[i+1].upperBound))});
 				processSectionData(dataPerSection);
@@ -656,7 +676,7 @@ function cluster(){
 				distances.splice(i,1);
 				
 				sections = updatedSection;
-				console.log(sections.length);
+				//console.log(sections.length);
 				--i;
 				count++;
 			}
@@ -925,6 +945,16 @@ function brushed() {
 	handle.attr("cx", xS(value));
 	//d3.select("body").style("background-color", d3.hsl(value, .8, .8));
 	sliderVal = Math.round(value);
+	if(toggleOff){
+		eventNo = Math.round(data.length/sliderVal);
+		if(sliderVal>0)
+			sliderText = eventNo+" events/section";
+		else
+			sliderText = "0 events/section";
+	}else
+		sliderText = "x-range: "+sliderVal;
+	
+	d3.selectAll("#sliderText").text(sliderText);
 	drawChart();
 
 }
