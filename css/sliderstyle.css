@@ -22,10 +22,12 @@
 }
 
 .brushslider .brushhandle {
-  fill: #fff;
+  fill: #2C93FF;
   stroke: #000;
-  stroke-opacity: .5;
+  stroke-opacity: .3;
   stroke-width: 1.25px;
   cursor: pointer;
 }
+
+
 

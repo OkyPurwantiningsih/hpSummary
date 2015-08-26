@@ -1,14 +1,10 @@
 
 // =================================== Start Variable Declaration ======================================
 // Define Canvas for Slider
-var sliderMargin = {top: 200, right: 6, bottom: 200, left: 6},
-	sliderWidth = 290 - sliderMargin.left - sliderMargin.right,
+var sliderMargin = {top: 200, right: 20, bottom: 200, left: 10},
+	sliderWidth = 280 - sliderMargin.left - sliderMargin.right,
 	sliderHeight = 400 - sliderMargin.bottom - sliderMargin.top;
 var xS, brush, svgS, slider, handle, sliderVal, eventNo;
-var brush2, handle2;
-var brush3, handle3;
-var sliderXRangeClicked = true, sliderEventClicked = false, sliderClusterClicked = false;
-var blueColor = "rgb(44,147,255)", greyColor = "rgb(221,221,221)";
 
 // Define y axis variable
 var listOfSession, tr_y, y, yAxis, sectionLine, axis, gridyAxis; 
@@ -31,7 +27,8 @@ var containerWidth=1200,
 	width = containerWidth - margin.left - margin.right,
 	height = containerHeight - margin.top - margin.bottom;
 var stack, area;
-var sessions = "1,2,3,4,5,6,7,8,9,10,11,12,13,14";
+//var sessions = "1,2,3,4,5,6,7,8,9,10,11,12,13,14";
+var sessions = "1,2";
 //var sessions = "1,2,3,4,5,6,7";
 var sessionArr = sessions.split(",");
 var svg;
@@ -41,8 +38,8 @@ var drag, crossedLeftLine = [], crossedRightLine = [], upperBound, lowerBound,
 var sections = [], distances = [], max, sectionName;
 var minX, maxX, sectionSizePx, n;
 var threshold = 0.2; // if distance is below threshold, then merge
-var alpha = 0.2;
-var test;
+var alpha = 0.5;
+
 // =================================== Start Application Code ======================================
 $(document).ready(function (){
 	load();
@@ -80,8 +77,6 @@ function load(){
 
 			// Draw Slider. Set max slider value = number of sections (n)
 			drawSlider();
-			drawSlider_Event();
-			drawSlider_Cluster();
 			
 			// Get initial value of slider switch
 			if($('#sliderSwitch').children().children().hasClass('switch-on')){
@@ -149,67 +144,7 @@ function load(){
 				threshold = $(this).val();
 				//console.log('Content has been changed to '+content);
 			});
-			
-			// What to do when slider radio button is clicked
-			$('.radio').click(function() {
-				clickedRadio = $(this).find("input")[0].id;
-				if(clickedRadio=="radioXRange"){
-					if(!($(this).hasClass('checked'))){
-						d3.select('#circleXRange').style("fill", blueColor)
-												 .style("pointer-events", "visible");
-						d3.select('#circleEvent').style("fill", greyColor)
-												.style("pointer-events", "none")
-												.transition()
-												.duration(1000)
-												.attr("cx", 0);
-						d3.select('#circleCluster').style("fill", greyColor)
-												.style("pointer-events", "none")
-												.transition()
-												.duration(1000)
-												.attr("cx", 0);
-						sliderXRangeClicked = true;
-						sliderEventClicked = false;
-						sliderClusterClicked = false;
-					}
-				}
-				if(clickedRadio=="radioEvent"){
-					if(!($(this).hasClass('checked'))){
-						d3.select('#circleXRange').style("fill", greyColor)
-												.style("pointer-events", "none")
-												.transition()
-												.duration(1000)
-												.attr("cx", 0);
-						d3.select('#circleEvent').style("fill", blueColor).style("pointer-events", "visible");
-						d3.select('#circleCluster').style("fill", greyColor)
-												.style("pointer-events", "none")
-												.transition()
-												.duration(1000)
-												.attr("cx", 0);
-						
-						sliderXRangeClicked = false;
-						sliderEventClicked = true;
-						sliderClusterClicked = false;
-					}
-				}
-				if(clickedRadio=="radioCluster"){
-					if(!($(this).hasClass('checked'))){
-						d3.select('#circleXRange').style("fill", greyColor)
-												.style("pointer-events", "none")
-												.transition()
-												.duration(1000)
-												.attr("cx", 0);
-						d3.select('#circleEvent').style("fill", greyColor)
-												.style("pointer-events", "none")
-												.transition()
-												.duration(1000)
-												.attr("cx", 0);
-						d3.select('#circleCluster').style("fill", blueColor).style("pointer-events", "visible");
-						sliderXRangeClicked = false;
-						sliderEventClicked = false;
-						sliderClusterClicked = true;
-					}
-				}
-			});
+
 		}
 	})
 }
@@ -265,7 +200,7 @@ function drawChart(){
 		
 		sections.length = 0;
 		// ====== 2. Define the profile of each section
-		if(sliderEventClicked){
+		if(toggleOff){
 
 			//sections = processSectionDataByNumber(eventNo);
 			sections = processSectionDataByNumber2(eventNo);
@@ -305,7 +240,8 @@ function drawChart(){
 				sectionName++;
 				i = nexti;
 			}
-			console.log(sections);
+			//console.log(sections);
+			printSection(sections);
 			// ====== 4. calculate distance between consecutive slices
 			calculateDistance(sections);
 			
@@ -766,6 +702,7 @@ function cluster(){
 		if(count===0){
 			break;
 		}
+		printSection(sections);
 		// recalculate distances
 		calculateDistance(sections);
 
@@ -800,6 +737,8 @@ function calculateDistance(input){
 		d2 = Math.sqrt(sum)/Math.sqrt(noOfSession);
 		
 		// 3. Combine both distance
+		console.log("d1: "+d1);
+		console.log("d2: "+d2);
 		d = (alpha*d1)+((1-alpha)*d2);
 		distances.push(d);
 	}
@@ -861,7 +800,7 @@ function processSectionDataByNumber(inputNo){
 		sectionName++;
 		i=endSlice;
 	}
-	console.log(output);
+	//console.log(output);
 	return output;
 	
 	
@@ -931,7 +870,7 @@ function processSectionDataByNumber2(inputNo){
 		sectionName++;
 		i=endSlice;
 	}
-	console.log(output);
+	//console.log(output);
 	return output;
 	
 	
@@ -1077,13 +1016,11 @@ function drawSlider(){
 
 	svgS = d3.select("#brushSlider").append("svg")
 		.attr("width", sliderWidth + sliderMargin.left + sliderMargin.right)
-		.attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom);
-	  
-	slider1 = svgS.append("g")
-		.attr("id", "sliderXRange")
+		.attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom)
+	  .append("g")
 		.attr("transform", "translate(" + sliderMargin.left + "," + 20 + ")"); // set position of slider
 		
-	slider1.append("g")
+	svgS.append("g")
 		.attr("class", "x slideraxis")
 		.call(d3.svg.axis()
 		  .scale(xS)
@@ -1095,131 +1032,27 @@ function drawSlider(){
 	  .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
 		.attr("class", "halo");
 
-	brushslider1 = slider1.append("g")
+	slider = svgS.append("g")
 		.attr("class", "brushslider")
 		.call(brush);
 
-	brushslider1.selectAll(".extent,.resize")
+	slider.selectAll(".extent,.resize")
 		.remove();
 
-	brushslider1.select(".background")
+	slider.select(".background")
 		.attr("height", sliderHeight);
 
-	handle1 = brushslider1.append("circle")
-		.attr("id","circleXRange")
+	handle = slider.append("circle")
 		.attr("class", "brushhandle")
 		.attr("transform", "translate(0," + sliderHeight / 2 + ")")
 		.attr("r", 5);
 
-	brushslider1
+	slider
 		.call(brush.event)
 	  .transition() // gratuitous intro!
 		.duration(750)
 		.call(brush.extent([0, 0]))
 		.call(brush.event);
-}
-
-function drawSlider_Event(){
-	brush2 = d3.svg.brush()
-		.x(xS)
-		.extent([0, 0])
-		.on("brush", brushed2);
-		
-	slider2 = svgS.append("g")
-				  .attr("id", "sliderEvent")
-				  .attr("transform", "translate(" + sliderMargin.left + "," + 47 + ")");
-				 
-	slider2.append("g")
-		.attr("class", "x slideraxis")
-		.attr("transform", "translate(0," + sliderHeight / 2 + ")")
-		.call(d3.svg.axis()
-		  .scale(xS)
-		  .orient("bottom")
-		  .tickFormat(function(d) { return d; })
-		  .tickSize(0)
-		  .tickPadding(12))
-	  .select(".domain")
-	  .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
-		.attr("class", "halo");
-
-	brushslider2 = slider2.append("g")
-		.attr("class", "brushslider")
-		.call(brush2);
-
-	brushslider2.selectAll(".extent,.resize")
-		.remove();
-
-	brushslider2.select(".background")
-		.attr("height", sliderHeight);
-
-	handle2 = brushslider2.append("circle")
-		.attr("id","circleEvent")
-		.attr("class", "brushhandle")
-		.attr("transform", "translate(0," + sliderHeight / 2 + ")")
-		.style("fill", greyColor)
-		.style("pointer-events", "none")
-		.attr("r", 5);
-
-	brushslider2
-		.call(brush2.event)
-	  .transition() // gratuitous intro!
-		.duration(750)
-		.call(brush2.extent([0, 0]))
-		.call(brush2.event);
-}
-
-function drawSlider_Cluster(){
-	xSCluster = d3.scale.linear()
-		.domain([0, 1])
-		.range([0, sliderWidth])
-		.clamp(true);
-		
-	brush3 = d3.svg.brush()
-		.x(xSCluster)
-		.extent([0, 0])
-		.on("brush", brushed3);
-		
-	slider3 = svgS.append("g")
-				  .attr("id", "sliderCluster")
-				  .attr("transform", "translate(" + sliderMargin.left + "," + 74 + ")");
-				  
-	slider3.append("g")
-		.attr("class", "x slideraxis")
-		.attr("transform", "translate(0," + sliderHeight / 2 + ")")
-		.call(d3.svg.axis()
-		  .scale(xSCluster)
-		  .orient("bottom")
-		  .tickFormat(function(d) { return d; })
-		  .tickSize(0)
-		  .tickPadding(12))
-	  .select(".domain")
-	  .select(function() { return this.parentNode.appendChild(this.cloneNode(true)); })
-		.attr("class", "halo");
-
-	brushslider3 = slider3.append("g")
-		.attr("class", "brushslider")
-		.call(brush3);
-
-	brushslider3.selectAll(".extent,.resize")
-		.remove();
-
-	brushslider3.select(".background")
-		.attr("height", sliderHeight);
-
-	handle3 = brushslider3.append("circle")
-		.attr("id","circleCluster")
-		.attr("class", "brushhandle")
-		.attr("transform", "translate(0," + sliderHeight / 2 + ")")
-		.style("fill", greyColor)
-		.style("pointer-events", "none")
-		.attr("r", 5);
-
-	brushslider3
-		.call(brush3.event)
-	  .transition() // gratuitous intro!
-		.duration(750)
-		.call(brush3.extent([0, 0]))
-		.call(brush3.event);
 }
 
 function brushed() {
@@ -1231,7 +1064,7 @@ function brushed() {
 		brush.extent([value, value]);
 	}
 
-	handle1.attr("cx", xS(value));
+	handle.attr("cx", xS(value));
 	//d3.select("body").style("background-color", d3.hsl(value, .8, .8));
 	sliderVal = Math.round(value);
 	if(toggleOff){
@@ -1251,70 +1084,6 @@ function brushed() {
 	
 	d3.selectAll("#sliderText").text(sliderText);
 	drawChart();
-
-}
-
-function brushed2() {
-	var value = brush2.extent()[0];
-	
-
-	if (d3.event.sourceEvent) { // not a programmatic event
-		value = xS.invert(d3.mouse(this)[0]);
-		brush2.extent([value, value]);
-	}
-
-	handle2.attr("cx", xS(value));
-	//d3.select("body").style("background-color", d3.hsl(value, .8, .8));
-	sliderVal = Math.round(value);
-	if(toggleOff){
-		eventNo = Math.round(data.filter(isPositiveOrNegative).length/sliderVal);
-		//eventNo = Math.round(data.length/sliderVal);
-		if(sliderVal>0)
-			sliderText = eventNo+" events/section";
-		else
-			sliderText = "0 events/section";
-	}else{
-		if(sliderVal>0)
-			sliderText = "x-range: "+round((n/sliderVal),2);
-		else
-			sliderText = "x-range: "+n;
-	}
-		
-	
-	d3.selectAll("#sliderText").text(sliderText);
-	drawChart();
-
-}
-
-function brushed3() {
-	var value = brush3.extent()[0];
-	
-
-	if (d3.event.sourceEvent) { // not a programmatic event
-		value = xSCluster.invert(d3.mouse(this)[0]);
-		brush3.extent([value, value]);
-	}
-
-	handle3.attr("cx", xSCluster(value));
-	//d3.select("body").style("background-color", d3.hsl(value, .8, .8));
-	sliderVal = Math.round(value);
-	if(toggleOff){
-		eventNo = Math.round(data.filter(isPositiveOrNegative).length/sliderVal);
-		//eventNo = Math.round(data.length/sliderVal);
-		if(sliderVal>0)
-			sliderText = eventNo+" events/section";
-		else
-			sliderText = "0 events/section";
-	}else{
-		if(sliderVal>0)
-			sliderText = "x-range: "+round((n/sliderVal),2);
-		else
-			sliderText = "x-range: "+n;
-	}
-		
-	
-	d3.selectAll("#sliderText").text(sliderText);
-	//drawChart();
 
 }
 
@@ -1655,5 +1424,14 @@ function getMinSectionSize(input){
 // Function to check if it's a Positive or negative event
 function isPositiveOrNegative(element) {
 	return ((element.eventCat == "Positive")||(element.eventCat == "Negative"));
+}
+
+function printSection(input){
+	for(var i=0; i<input.length; i++){
+		console.log("===section "+(i+1)+"===");
+		for(var j=input[0].normalizedSlices.length-1; j>=0; j--){
+			console.log("session "+(j+1)+": "+input[i].normalizedSlices[j].neg+","+input[i].normalizedSlices[j].net+","+input[i].normalizedSlices[j].pos);
+		}
+	}
 }
 

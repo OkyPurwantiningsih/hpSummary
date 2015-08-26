@@ -19,8 +19,7 @@
 	<script type="text/javascript" src="js/gsdk-checkbox.js"></script>
 	<script type="text/javascript" src="js/gsdk-bootstrapswitch.js"></script>
 	<script type="text/javascript" src="js/get-shit-done.js"></script>
-	<script type="text/javascript" src="js/gsdk-radio.js"></script>
-	<script type="text/javascript" src="js/summary2.js"></script>
+	<script type="text/javascript" src="js/summary3.js"></script>
 	<script type="text/javascript" src="js/d3.min.js"></script>
 
 	
@@ -39,7 +38,7 @@
 			margin-top:10px;
 			padding:10px;
 			width:600px;
-			height:110px;
+			height:63px;
 			float: left;
 			border-radius: 5px;
 		}
@@ -50,7 +49,6 @@
 			margin-top:10px;
 			padding:10px;
 			width:300px;
-			height:110px;
 			float: left;
 			border-radius: 5px;
 		}
@@ -61,7 +59,7 @@
 			margin-top:10px;
 			padding:10px;
 			width:150px;
-			height:110px;
+			height:63px;
 			float: left;
 			border-radius: 5px;
 		}
@@ -99,23 +97,21 @@
 		<div class="row">
 			<div class="col-md-6">
 				<div class="tableContainer">
-					<label class="radio">
-						<input type="radio" name="optionsRadios" data-toggle="radio" id="radioXRange" value="option1" checked>
-						<i></i>Disc. by x-range &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;# Of Slices       
-					</label>
-					<label class="radio">   
-						<input type="radio" name="optionsRadios" data-toggle="radio" id="radioEvent" value="option1">
-						<i></i>Disc. by number of events &nbsp;  &nbsp;# Of Slices
-					</label>
-					<label class="radio">   
-						<input type="radio" name="optionsRadios" data-toggle="radio" id="radioCluster" value="option1">
-						<i></i>Clustering &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Threshold
-					</label>
+					<div class="cell" style="width:90px;">
+					By X Range
+					</div>
+					<div  id="sliderSwitch" class="cell" style="width:80px;">
+						<input type="checkbox" checked data-toggle="switch" class="ct-green"/>
+					</div>
+					<div class="cell2">
+					<b id="sliderText">38 events/section</b>
+					</div>
+					
 				</div>
 			</div>
-
+			<div class="cell">
 				<div id="brushSlider"></div>
-
+			</div>
 			<!--<div class="cell">
 				<span class="label label-success">Success</span>
 			</div>-->
