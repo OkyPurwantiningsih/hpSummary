@@ -4,7 +4,7 @@
 var sliderMargin = {top: 200, right: 6, bottom: 200, left: 6},
 	sliderWidth = 290 - sliderMargin.left - sliderMargin.right,
 	sliderHeight = 400 - sliderMargin.bottom - sliderMargin.top;
-var xS, brush, svgS, slider, handle, sliderVal, eventNo;
+var xS, brush, svgS, slider, handle, sliderVal, eventNo, thresholdVal, xSCluster;
 var brush2, handle2;
 var brush3, handle3;
 var sliderXRangeClicked = true, sliderEventClicked = false, sliderClusterClicked = false;
@@ -15,8 +15,7 @@ var listOfSession, tr_y, y, yAxis, sectionLine, axis, gridyAxis;
 
 // Define x axis variable
 var x,x2, trmaxX, tr_x, xAxis;
-// Define variable for Switch
-var toggleOff, clusterOff;
+
 var posChecked = true, netChecked = true, negChecked = true;
 var checkedEvent = 3;
 
@@ -42,7 +41,7 @@ var sections = [], distances = [], max, sectionName;
 var minX, maxX, sectionSizePx, n;
 var threshold = 0.2; // if distance is below threshold, then merge
 var alpha = 0.2;
-var test;
+
 // =================================== Start Application Code ======================================
 $(document).ready(function (){
 	load();
@@ -83,34 +82,6 @@ function load(){
 			drawSlider_Event();
 			drawSlider_Cluster();
 			
-			// Get initial value of slider switch
-			if($('#sliderSwitch').children().children().hasClass('switch-on')){
-				toggleOff=false;
-			}else{
-				toggleOff=true;
-			}
-			
-			// Get initial value of cluster switch
-			if($('#clusterSwitch').children().children().hasClass('switch-on')){
-				clusterOff=false;
-			}else{
-				clusterOff=true;
-			}
-			
-			// What to do when switch is clicked
-			$('#sliderSwitch').click(function() {
-				
-				// Check If Enabled (Has 'switch-on' Class)
-				if ($(this).children().children().hasClass('switch-on')){
-					toggleOff=false;
-					
-				} else { // If Button Is Disabled (Has 'switch-off' Class)
-					toggleOff=true;
-				}
-				console.log(toggleOff);
-				
-			});
-			
 			// What to do when checkbox is clicked
 			$('.checkbox').click(function() {
 				if($(this).hasClass('checked')){
@@ -130,26 +101,7 @@ function load(){
 					redrawChart();
 				}
 			});
-			
-			// What to do when cluster switch is clicked
-			$('#clusterSwitch').click(function() {
-				
-				// Check If Enabled (Has 'switch-on' Class)
-				if ($(this).children().children().hasClass('switch-on')){
-					clusterOff=false;
-					
-				} else { // If Button Is Disabled (Has 'switch-off' Class)
-					clusterOff=true;
-				}
-				console.log(clusterOff);
-			});
-			
-			// What to do when threshold text box is changed
-			$('#threshold').on('change', function(){
-				threshold = $(this).val();
-				//console.log('Content has been changed to '+content);
-			});
-			
+						
 			// What to do when slider radio button is clicked
 			$('.radio').click(function() {
 				clickedRadio = $(this).find("input")[0].id;
@@ -273,11 +225,9 @@ function drawChart(){
 			// Visualize
 			draw();
 		}else{
-			
-			
 			sectionSizePx = width/sliderVal;
 			xRange = n/sliderVal;
-			
+
 			var neg, net, pos;
 			sectionName = 1;
 			var i=(minX-1), nexti;
@@ -305,12 +255,12 @@ function drawChart(){
 				sectionName++;
 				i = nexti;
 			}
-			console.log(sections);
+			//console.log(sections);
 			// ====== 4. calculate distance between consecutive slices
 			calculateDistance(sections);
 			
 			// ====== 5. Hierarchical Clustering
-			if(!clusterOff)
+			if(sliderClusterClicked)
 				cluster();
 			
 			// Visualize
@@ -388,7 +338,7 @@ function initXAxis(){
 
 	trmaxX = getMaxYAllSection();
 	
-	if(toggleOff){
+	if(sliderEventClicked){
 		tr_x = d3.scale.linear()
 				.range([0, getMinSectionSize(sections)])
 				.domain([0, trmaxX]);
@@ -713,7 +663,7 @@ function cluster(){
 		// if the distance is below the threshold, merge the section
 		count = 0;
 		for(var i=0; i<distances.length; i++){
-			if(distances[i]<threshold){
+			if(distances[i]<thresholdVal){
 				//console.log("merge section "+ (i+1) +" and "+ (i+2));
 				
 				dataPerSection = data.filter(function(d){ return ((d.x > sections[i].lowerBound) && (d.x <= sections[i+1].upperBound))});
@@ -804,7 +754,7 @@ function calculateDistance(input){
 		distances.push(d);
 	}
 	
-	console.log(distances);
+	//console.log(distances);
 }
 
 // this function considers all event type
@@ -879,7 +829,7 @@ function processSectionDataByNumber2(inputNo){
 	sectionName = 1;
 	lowerBound = minX-1;
 	lastSection = false;
-	console.log("===============");
+	//console.log("===============");
 	while(i<dataPosNeg.length){
 		
 		dataPersection = [];
@@ -931,7 +881,7 @@ function processSectionDataByNumber2(inputNo){
 		sectionName++;
 		i=endSlice;
 	}
-	console.log(output);
+	//console.log(output);
 	return output;
 	
 	
@@ -1214,12 +1164,13 @@ function drawSlider_Cluster(){
 		.style("pointer-events", "none")
 		.attr("r", 5);
 
-	brushslider3
+	/*brushslider3
 		.call(brush3.event)
 	  .transition() // gratuitous intro!
 		.duration(750)
 		.call(brush3.extent([0, 0]))
-		.call(brush3.event);
+		.call(brush3.event);*/
+		
 }
 
 function brushed() {
@@ -1232,24 +1183,8 @@ function brushed() {
 	}
 
 	handle1.attr("cx", xS(value));
-	//d3.select("body").style("background-color", d3.hsl(value, .8, .8));
 	sliderVal = Math.round(value);
-	if(toggleOff){
-		eventNo = Math.round(data.filter(isPositiveOrNegative).length/sliderVal);
-		//eventNo = Math.round(data.length/sliderVal);
-		if(sliderVal>0)
-			sliderText = eventNo+" events/section";
-		else
-			sliderText = "0 events/section";
-	}else{
-		if(sliderVal>0)
-			sliderText = "x-range: "+round((n/sliderVal),2);
-		else
-			sliderText = "x-range: "+n;
-	}
-		
-	
-	d3.selectAll("#sliderText").text(sliderText);
+
 	drawChart();
 
 }
@@ -1264,24 +1199,9 @@ function brushed2() {
 	}
 
 	handle2.attr("cx", xS(value));
-	//d3.select("body").style("background-color", d3.hsl(value, .8, .8));
 	sliderVal = Math.round(value);
-	if(toggleOff){
-		eventNo = Math.round(data.filter(isPositiveOrNegative).length/sliderVal);
-		//eventNo = Math.round(data.length/sliderVal);
-		if(sliderVal>0)
-			sliderText = eventNo+" events/section";
-		else
-			sliderText = "0 events/section";
-	}else{
-		if(sliderVal>0)
-			sliderText = "x-range: "+round((n/sliderVal),2);
-		else
-			sliderText = "x-range: "+n;
-	}
-		
-	
-	d3.selectAll("#sliderText").text(sliderText);
+	eventNo = Math.round(data.filter(isPositiveOrNegative).length/sliderVal);
+
 	drawChart();
 
 }
@@ -1296,25 +1216,10 @@ function brushed3() {
 	}
 
 	handle3.attr("cx", xSCluster(value));
-	//d3.select("body").style("background-color", d3.hsl(value, .8, .8));
-	sliderVal = Math.round(value);
-	if(toggleOff){
-		eventNo = Math.round(data.filter(isPositiveOrNegative).length/sliderVal);
-		//eventNo = Math.round(data.length/sliderVal);
-		if(sliderVal>0)
-			sliderText = eventNo+" events/section";
-		else
-			sliderText = "0 events/section";
-	}else{
-		if(sliderVal>0)
-			sliderText = "x-range: "+round((n/sliderVal),2);
-		else
-			sliderText = "x-range: "+n;
-	}
-		
-	
-	d3.selectAll("#sliderText").text(sliderText);
-	//drawChart();
+	thresholdVal = round(value,2);
+	sliderVal = n;
+	console.log(thresholdVal);
+	drawChart();
 
 }
 
