@@ -30,8 +30,8 @@ var containerWidth=1200,
 	width = containerWidth - margin.left - margin.right,
 	height = containerHeight - margin.top - margin.bottom;
 var stack, area;
-var sessions = "1,2,3,4,5,6,7,8,9,10,11,12,13,14";
-//var sessions = "1,2,3,4,5,6,7";
+//var sessions = "1,2,3,4,5,6,7,8,9,10,11,12,13,14";
+var sessions = "1,2";
 var sessionArr = sessions.split(",");
 var svg;
 
@@ -40,7 +40,7 @@ var drag, crossedLeftLine = [], crossedRightLine = [], upperBound, lowerBound,
 var sections = [], distances = [], max, sectionName;
 var minX, maxX, sectionSizePx, n;
 var threshold = 0.2; // if distance is below threshold, then merge
-var alpha = 0.2;
+var alpha = 0.5;
 
 // =================================== Start Application Code ======================================
 $(document).ready(function (){
@@ -50,7 +50,7 @@ $(document).ready(function (){
 function load(){
 	
 	//d3.json("data/summaryAllSessionCedric.json", function(error, dataAll) {
-	d3.json("data/test2.json", function(error, dataAll) {
+	d3.json("data/test.json", function(error, dataAll) {
 		if(error){
 			console.log(error);
 			alert("Data can't be loaded");
@@ -195,6 +195,7 @@ function redrawChart(){
 				sectionLine: line,
 				slices: slices,
 				normalizedSlices: normalizedSlices,
+				normalizedSlicesByCol: normalizedSlicesByCol,
 				stackData: stackData,
 				max: max
 			}));
@@ -203,8 +204,11 @@ function redrawChart(){
 			i = nexti;
 		}
 		
-		//calculateDistance(sections);
-		//cluster();
+		
+		/*if(sliderClusterClicked){
+			calculateDistance(sections);
+			cluster();
+		}*/
 		
 		// Visualize
 		redrawThemeRiverGraph(sections);
@@ -248,6 +252,7 @@ function drawChart(){
 					sectionLine: line,
 					slices: slices,
 					normalizedSlices: normalizedSlices,
+					normalizedSlicesByCol: normalizedSlicesByCol,
 					stackData: stackData,
 					max: max
 				}));
@@ -255,14 +260,14 @@ function drawChart(){
 				sectionName++;
 				i = nexti;
 			}
-			//console.log(sections);
+			console.log(sections);
 			// ====== 4. calculate distance between consecutive slices
 			calculateDistance(sections);
 			
 			// ====== 5. Hierarchical Clustering
 			if(sliderClusterClicked)
 				cluster();
-			
+			console.log(sections);
 			// Visualize
 			draw();
 		}
@@ -683,6 +688,7 @@ function cluster(){
 					sectionLine: line,
 					slices: slices,
 					normalizedSlices: normalizedSlices,
+					normalizedSlicesByCol: normalizedSlicesByCol,
 					stackData: stackData,
 					max: max
 				}));
@@ -729,32 +735,67 @@ function calculateDistance(input){
 	for(var i=0; i<input.length-1; i++){
 		
 		
-		d = 0, d1 = 0, d2 = 0;
-		sum = 0;
-		maxs1 = d3.max(input[i].slices, function(d){return (d.neg+d.net+d.pos);});
-		maxs2 = d3.max(input[i+1].slices, function(d){return (d.neg+d.net+d.pos);});
+		d = 0, d1 = 0, d2 = 0, d2Neg = 0, d2Net = 0, d2Pos = 0;
+		sumNeg = 0, sumNet = 0, sumPos = 0;
+		maxs1Neg = d3.max(input[i].slices, function(d){return d.neg;});
+		maxs1Net = d3.max(input[i].slices, function(d){return d.net;});
+		maxs1Pos = d3.max(input[i].slices, function(d){return d.pos;});
+		maxs2Neg = d3.max(input[i+1].slices, function(d){return d.neg;});
+		maxs2Net = d3.max(input[i+1].slices, function(d){return d.net;});
+		maxs2Pos = d3.max(input[i+1].slices, function(d){return d.pos;});
+		
+		if(maxs1Neg==0 && maxs1Net==0 && maxs1Pos==0){
+			s1_allzero = true;
+		}else{
+			s1_allzero = false;
+		}
+		
+		if(maxs2Neg==0 && maxs2Net==0 && maxs2Pos==0){
+			s2_allzero = true;
+		}else{
+			s2_allzero = false;
+		}
+				
 		for(var j=0; j<input[i].normalizedSlices.length; j++){
 			
 			s1 = input[i].normalizedSlices[j];
-			ss1 = input[i].slices[j];
+			ss1 = input[i].normalizedSlicesByCol[j];
 			s2 = input[i+1].normalizedSlices[j];
-			ss2 = input[i+1].slices[j];
+			ss2 = input[i+1].normalizedSlicesByCol[j];
 			
 			// 1. Calculate the first distance: the difference of proportion for each session between consecutive sections
 			d1 = d1 + (Math.sqrt(Math.pow((s2.neg-s1.neg),2)+Math.pow((s2.net-s1.net),2)+Math.pow((s2.pos-s1.pos),2))/maxDistance);
-			
+			console.log("d1-session"+(j+1)+":"+d1);
 			// 2. Calculate the second distance: the difference in number of events evolution between consecutive sections
-			sum = sum + Math.pow((((ss1.neg+ss1.net+ss1.pos)/maxs1)-((ss2.neg+ss2.net+ss2.pos)/maxs2)),2);
+			// ==== check if the denominator is zero
+
+			sumNeg = sumNeg + Math.pow((ss1.neg - ss2.neg),2);
+			sumNet = sumNet + Math.pow((ss1.net - ss2.net),2);
+			sumPos = sumPos + Math.pow((ss1.pos - ss2.pos),2);
 		}
 		d1 = d1/noOfSession;
-		d2 = Math.sqrt(sum)/Math.sqrt(noOfSession);
+		
+		// if one of the section is all zero and the other is at least has one that is not zero, then the distance is 1
+		if((s1_allzero && !s2_allzero)||(!s1_allzero && s2_allzero)){
+			d2 = 1;
+		
+		// if both sections is all zero or both has any values other than zero
+		}else{
+			d2Neg = Math.sqrt(sumNeg)/Math.sqrt(noOfSession);
+			d2Net = Math.sqrt(sumNet)/Math.sqrt(noOfSession);
+			d2Pos = Math.sqrt(sumPos)/Math.sqrt(noOfSession);
+			d2 = (d2Neg+d2Net+d2Pos)/3;
+		}
+		
 		
 		// 3. Combine both distance
+		console.log("d1:"+d1);
+		console.log("d2:"+d2);
 		d = (alpha*d1)+((1-alpha)*d2);
 		distances.push(d);
 	}
 	
-	//console.log(distances);
+	console.log(distances);
 }
 
 // this function considers all event type
@@ -804,6 +845,7 @@ function processSectionDataByNumber(inputNo){
 			sectionLine: line,
 			slices: slices,
 			normalizedSlices: normalizedSlices,
+			normalizedSlicesByCol: normalizedSlicesByCol,
 			stackData: stackData,
 			max: max
 		}));
@@ -873,6 +915,7 @@ function processSectionDataByNumber2(inputNo){
 			sectionLine: line,
 			slices: slices,
 			normalizedSlices: normalizedSlices,
+			normalizedSlicesByCol: normalizedSlicesByCol,
 			stackData: stackData,
 			max: max
 		}));
@@ -937,7 +980,11 @@ function processSectionData(input){
 	
 	// ====== 3. calculate normalized value for each slice by dividing it with max value	
 	normalizedSlices = [];
-
+	normalizedSlicesByCol = [];
+	
+	maxNeg = d3.max(slices, function(d){return d.neg;});
+	maxNet = d3.max(slices, function(d){return d.net;});
+	maxPos = d3.max(slices, function(d){return d.pos;});
 	for(var j=0; j<slices.length; j++){
 		// calculate max value for one session in one section
 		max = 0;
@@ -955,6 +1002,15 @@ function processSectionData(input){
 			pos:(slices[j].pos/max)
 		}));
 		}
+		
+		if(maxNeg==0) neg=0; else neg=(slices[j].neg/maxNeg);
+		if(maxNet==0) net=0; else net=(slices[j].net/maxNet);
+		if(maxPos==0) pos=0; else pos=(slices[j].pos/maxPos);
+		normalizedSlicesByCol.push(new Slice({
+			neg:neg,
+			net:net,
+			pos:pos
+		}));
 		
 	}
 
@@ -1279,6 +1335,7 @@ function Section(input){
 	this.sectionLine = input.sectionLine;
 	this.slices = input.slices;
 	this.normalizedSlices = input.normalizedSlices;
+	this.normalizedSlicesByCol = input.normalizedSlicesByCol;
 	this.stackData = input.stackData;
 	this.max = input.max;
 }
@@ -1536,6 +1593,7 @@ function recalculateSections(inputList, inputSectionName){
 				sectionLine: newLine,
 				slices: slices,
 				normalizedSlices: normalizedSlices,
+				normalizedSlicesByCol: normalizedSlicesByCol,
 				stackData: stackData,
 				max: max
 			}));
