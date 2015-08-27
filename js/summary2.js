@@ -30,8 +30,8 @@ var containerWidth=1200,
 	width = containerWidth - margin.left - margin.right,
 	height = containerHeight - margin.top - margin.bottom;
 var stack, area;
-//var sessions = "1,2,3,4,5,6,7,8,9,10,11,12,13,14";
-var sessions = "1,2";
+var sessions = "1,2,3,4,5,6,7,8,9,10,11,12,13,14";
+//var sessions = "1,2";
 var sessionArr = sessions.split(",");
 var svg;
 
@@ -50,7 +50,7 @@ $(document).ready(function (){
 function load(){
 	
 	//d3.json("data/summaryAllSessionCedric.json", function(error, dataAll) {
-	d3.json("data/test.json", function(error, dataAll) {
+	d3.json("data/test2.json", function(error, dataAll) {
 		if(error){
 			console.log(error);
 			alert("Data can't be loaded");
@@ -82,6 +82,11 @@ function load(){
 			drawSlider_Event();
 			drawSlider_Cluster();
 			
+			// Showing tooltip
+			$('.tableContainer').on('mouseenter', '.radio', showBox);
+			$('.tableContainer').on('mouseleave', '.radio', hideBox);
+			
+
 			// What to do when checkbox is clicked
 			$('.checkbox').click(function() {
 				if($(this).hasClass('checked')){
@@ -1618,5 +1623,32 @@ function getMinSectionSize(input){
 // Function to check if it's a Positive or negative event
 function isPositiveOrNegative(element) {
 	return ((element.eventCat == "Positive")||(element.eventCat == "Negative"));
+}
+
+function showBox(e){
+	var x = e.pageX + 20;
+	var y = e.pageY - 20;
+
+	var hoverOn = $(this).find("input")[0].id;
+	if(hoverOn=="radioXRange"){
+		$('#tooltipXRange').fadeIn();
+		$('#tooltipXRange').offset({ left: x, top: y });
+	}
+	if(hoverOn=="radioEvent"){
+		$('#tooltipEvent').fadeIn();
+		$('#tooltipEvent').offset({ left: x, top: y });
+	}
+	if(hoverOn=="radioCluster"){
+		$('#tooltipCluster').fadeIn();
+		$('#tooltipCluster').offset({ left: x, top: y });
+	}
+}
+
+
+function hideBox(){
+	var hoverOn = $(this).find("input")[0].id;
+	if(hoverOn=="radioXRange") $('#tooltipXRange').fadeOut();
+	if(hoverOn=="radioEvent") $('#tooltipEvent').fadeOut();
+	if(hoverOn=="radioCluster") $('#tooltipCluster').fadeOut();
 }
 

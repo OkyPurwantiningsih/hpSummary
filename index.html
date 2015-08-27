@@ -91,6 +91,71 @@
 		  vertical-align: middle;
 		  color: #05AE0E;
 		}
+		.hoverbox{
+			display:none;
+			width:300px;
+			height:50px;
+			color:#000;
+			background:#feffcd;
+			position:absolute;    
+		}
+		.toolTip {
+			display:none;
+			background-color: #ffffff;
+			border: 1px solid #73a7f0;
+			width: 300px;
+			height: 45px;
+			margin-left: 32px;
+			position:absolute;
+			border-radius: 4px;
+			-moz-border-radius: 4px;
+			-webkit-border-radius: 4px;
+			box-shadow: 0px 0px 8px -1px black;
+			-moz-box-shadow: 0px 0px 8px -1px black;
+			-webkit-box-shadow: 0px 0px 8px -1px black;
+		}
+		
+		.eventTooltip{
+			height: 65px;
+		}
+
+		.toolTip p {
+			padding:10px;
+		}
+
+		#tailShadow {
+			background-color: transparent;
+			width: 4px;
+			height: 4px;
+			position: absolute;
+			top: 16px;
+			left: -8px;
+			z-index: -10;
+			box-shadow: 0px 0px 8px 1px black;
+			-moz-box-shadow: 0px 0px 8px 1px black;
+			-webkit-box-shadow: 0px 0px 8px 1px black;
+		}
+
+		#tail1 {
+			width: 0px;
+			height: 0px;
+			border: 10px solid;
+			border-color: transparent #73a7f0 transparent transparent;
+			position:absolute;
+			top: 8px;
+			left: -20px;
+		}
+
+		#tail2 {
+			width: 0px;
+			height: 0px;
+			border: 10px solid;
+			border-color: transparent #ffffff transparent transparent;
+			position:absolute;
+			left: -18px;
+			top: 8px;
+		}
+
 	</style>
   </head>
   <body>
@@ -140,8 +205,29 @@
 			</div>
 		</div>
 	</div>
-
+	
 	<div id="chartContainer"></div>
+	<!--<div id="tooltipXRange" class="hoverbox">Sections cover equal x-range</div>
+	<div id="tooltipEvent" class="hoverbox">Sections cover equal number of positive and negative events</div>
+	<div id="tooltipCluster" class="hoverbox">Sections cover consecutive similar pattern</div>-->
+	<div id="tooltipXRange" class="toolTip">
+		<p>Sections cover equal x-range</p>
+		<div id="tailShadow"></div>
+		<div id="tail1"></div>
+		<div id="tail2"></div>
+	</div>
+		<div id="tooltipEvent" class="toolTip eventTooltip">
+		<p>Sections cover equal number of positive and negative events</p>
+		<div id="tailShadow"></div>
+		<div id="tail1"></div>
+		<div id="tail2"></div>
+	</div>
+		<div id="tooltipCluster" class="toolTip">
+		<p>Sections cover consecutive similar pattern</p>
+		<div id="tailShadow"></div>
+		<div id="tail1"></div>
+		<div id="tail2"></div>
+	</div>
 
   </body>
 </html>
